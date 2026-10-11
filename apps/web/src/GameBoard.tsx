@@ -16,7 +16,9 @@ import {
 } from "@hanabi/game";
 import { art, COLOR_UI, rating } from "./art.js";
 import { useConfirm } from "./confirm.js";
+import { denySound, pickSound, useGameSfx } from "./game-sfx.js";
 import GameRules from "./GameRules.js";
+import { useSfxCountdown } from "./gm-sound.js";
 import { FaceCard, faceText, HiddenCard, MiniCard, Sprite } from "./hanabi/cards.js";
 import { pickLayout, labelH, type BoardLayout } from "./hanabi/layout.js";
 import { clueValueText, describe } from "./hanabi/log.js";
@@ -145,6 +147,9 @@ function GameBoard(props: GameBoardProps) {
   const myIndex = game.players.findIndex((p) => p.id === myId);
   const mates = game.players.map((_, k) => game.players[(myIndex + 1 + k) % game.players.length]!).filter((p) => p.id !== myId);
   const [stageRef, boardRef, layout, stageSize] = useBoardLayout(game, myId);
+  // 声音：每个动作的音效（game-sfx.ts）+ 自己回合最后 5 秒的倒计时
+  useGameSfx({ game, selfId, autoPlaying });
+  useSfxCountdown(myTurn && !autoPlaying, secondsLeft);
   const [confirm, confirmDialog] = useConfirm();
 
   const [selection, setSelection] = useState<Selection>(null);
@@ -248,10 +253,12 @@ function GameBoard(props: GameBoardProps) {
   function pickMateCard(player: Player, card: HandCard) {
     if (!canClue || busy) return;
     if (selection?.kind === "mate" && selection.id === card.id) {
+      pickSound(false);
       setSelection(null);
       setClue(null);
       return;
     }
+    pickSound(true);
     setSelection({ kind: "mate", player: player.id, id: card.id });
     setClue(null);
   }
@@ -267,8 +274,10 @@ function GameBoard(props: GameBoardProps) {
   const myCard = selection?.kind === "mine" ? me.hand.find((c) => c.id === selection.id) : undefined;
   function pickMyCard(card: HandCard) {
     if (spectating || !playing) return;
+    const off = selection?.kind === "mine" && selection.id === card.id;
+    pickSound(!off);
     setClue(null);
-    setSelection(selection?.kind === "mine" && selection.id === card.id ? null : { kind: "mine", id: card.id });
+    setSelection(off ? null : { kind: "mine", id: card.id });
   }
   async function playOrDiscard(type: "PLAY" | "DISCARD") {
     if (!myCard || !myTurn) return;
@@ -382,6 +391,7 @@ function GameBoard(props: GameBoardProps) {
                   preview={clue?.target === player.id ? preview : undefined}
                   flash={flash}
                   onPick={canClue && !busy ? (card) => pickMateCard(player, card) : undefined}
+                  onDeny={!spectating && playing && !autoPlaying ? denySound : undefined}
                 />
               ))}
             </div>
@@ -534,7 +544,7 @@ function Tags({ member }: { member: LobbyMember | undefined }) {
   );
 }
 
-function MatePanel({ player, index, game, layout, member, active, selectedId, preview, flash, onPick }: {
+function MatePanel({ player, index, game, layout, member, active, selectedId, preview, flash, onPick, onDeny }: {
   player: Player;
   index: number;
   game: GameState;
@@ -545,9 +555,14 @@ function MatePanel({ player, index, game, layout, member, active, selectedId, pr
   preview: Set<number> | undefined;
   flash: Record<number, string>;
   onPick: ((card: HandCard) => void) | undefined;
+  /** 现在不能给提示（不是自己的回合、提示标记用完）时点了队友的牌：响一声「不行」（桌面版的牌这时不是按钮）。 */
+  onDeny: (() => void) | undefined;
 }) {
+  const deny = !onPick && onDeny && !layout.mobile
+    ? (event: React.MouseEvent) => { if ((event.target as Element).closest(".hb-cardcol")) onDeny(); }
+    : undefined;
   return (
-    <div className={["hb-panel hb-mate", active ? "active" : "", onPick ? "pickable" : ""].join(" ")} data-tutorial={`mate-${index}`}>
+    <div className={["hb-panel hb-mate", active ? "active" : "", onPick ? "pickable" : ""].join(" ")} data-tutorial={`mate-${index}`} onClick={deny}>
       <div className="hb-mate-head">
         <strong title={player.name}>{player.name}</strong>
         <span className="hb-tags">
@@ -562,7 +577,7 @@ function MatePanel({ player, index, game, layout, member, active, selectedId, pr
           const click = onPick ? () => onPick(card) : undefined;
           if (layout.mobile) {
             return (
-              <button key={card.id} type="button" className={glow ? "hb-minibtn glow" : "hb-minibtn"} onClick={click} disabled={!click} data-tutorial={`mate-${index}-card-${k}`}>
+              <button key={card.id} type="button" className={glow ? "hb-minibtn glow" : "hb-minibtn"} onClick={click} disabled={!click} data-tutorial={`mate-${index}-card-${k}`} data-sfx={click ? "none" : undefined}>
                 <MiniCard face={face ?? null} scale={2} />
                 {(card.clues.color || card.clues.rank) && <i className="hb-known-dot" title="他已经收到过提示" />}
               </button>
@@ -711,10 +726,10 @@ function ActionPanel(props: {
       <>
         <p className="hb-hint big">提示{mate.name}：</p>
         <div className="hb-buttons">
-          <button className="hb-act" type="button" onClick={() => props.onChooseClue("color")} data-tutorial="clue-color">
+          <button className="hb-act" type="button" onClick={() => props.onChooseClue("color")} data-tutorial="clue-color" data-sfx="select">
             <img src={art.icon.clueColor} alt="" /><span className={`c-${face.color}`}>{COLOR_UI[face.color].name}色</span>
           </button>
-          <button className="hb-act" type="button" onClick={() => props.onChooseClue("rank")} data-tutorial="clue-rank">
+          <button className="hb-act" type="button" onClick={() => props.onChooseClue("rank")} data-tutorial="clue-rank" data-sfx="select">
             <img src={art.icon.clueRank} alt="" /><span>数字{face.rank}</span>
           </button>
         </div>

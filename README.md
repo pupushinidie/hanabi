@@ -98,6 +98,23 @@ node scripts/spy.mjs                        # 抓包检查隐藏信息
 | `art/` | 美术规格 `spec.md`、出图脚本、定稿 `out/final/`（复制到 `apps/web/public/art/`） |
 | `scripts/` | 陪玩机器人、抓包脚本 |
 
+## 声音
+
+这款还没有背景音乐（`useBgm(NO_BGM)`），进了房间和教程里顶栏有 ♪ 面板调音效、语音；手机牌桌上 ♪ 在顶栏「切换白天版」旁边（「服务已连接」只留绿点腾地方）。共用的 `gm-sound.tsx` 不要改（各仓库一模一样）。
+
+动作音效在 `apps/web/src/game-sfx.ts`（自己的动作响亮，别人的减半，观战都算别人的；进房间 / 重连第一次拿到状态不响，版本一下跳好几步不补放）：
+
+- 点选自己的牌 / 队友的牌 `select`（再点取消），选「颜色 / 数字」也是 `select`；不是自己的回合点队友的牌 `deny`。
+- 给提示：招牌的**风铃**（颜色提示高、数字提示低）；提示到自己头上再加 `reveal`；提示标记用完再响两声往下走的低音。
+- 打出接上：`card` + 招牌的**烟花**（哨声上天、炸开、噼啪）+ `score`；打出 5 放满一种颜色是大烟花 + 第二发 + `sparkle`，拿回标记「叮」。
+- 打错：`card` + 招牌的**哑炮**（引信嘶嘶、闷响）+ `bust`；第 2 次打错多两下心跳警报；第 3 次打错直接 `boom`。
+- 弃牌：`pass` + 拿回提示标记的「叮」；摸牌轻轻一擦 `draw`；整理自己的手牌一下很轻的擦牌声；大师模式被跳过 `pass`。
+- 牌堆摸完进最后一轮：引信点着的嘶声 + `roundStart`。
+- 轮到你 `yourTurn`（等动作声响完），最后 5 秒倒计时，自己超时 `timeout`；再来一局 / 教程重开 `shuffle` + `deal`。
+- 终局全队一起赢或输：普通模式没炸且 **≥16 分**（评价「精彩」起）算赢、大师模式打满 25 分算赢，其余（含打错 3 次 0 分）响输的 `gameOver`；25 分再放一串礼花。门槛是 `game-sfx.ts` 的 `WIN_SCORE`。
+- 房间：进出、开局、聊天由 `useRoomSfx`（App.tsx），服务器拒绝操作 `error`。
+- 开发模式下每个音效名字记到 `window.__sfxLog`（别人的动作带「·他」），自测脚本 `~/projects/qa-reports/tools/hanabi-sfx.mjs`（`PART=online / tutorial / panel`）。
+
 ## 部署
 
 服务器上 `~/hanabi`，pm2 进程 `hanabi`（端口 3024），网页在 `/var/www/hanabi`，Caddy `handle_path /hanabi/*`（在付费网关 `@games` 里）。由制作人部署。

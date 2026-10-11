@@ -76,7 +76,7 @@ function CardShell({ scale, glow, lifted, flash, onClick, title, tutorial, dim, 
     </span>
   );
   return onClick ? (
-    <button type="button" className="hb-cardcol" onClick={onClick} title={title} data-tutorial={tutorial}>
+    <button type="button" className="hb-cardcol" onClick={onClick} title={title} data-tutorial={tutorial} data-sfx="none">
       {body}
     </button>
   ) : (

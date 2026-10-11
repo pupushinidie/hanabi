@@ -296,8 +296,10 @@ button.hb-cardcol:hover .hb-card:not(.lifted) { transform: translateY(-4px); }
   .app-shell.hb-game { height: auto; min-height: 100dvh; padding: 0 8px; overflow: visible; }
   .hb-topbar { height: 44px; gap: 6px; }
   .hb-topbar .brand-name { display: none; }
-  .hb-topbar-right > :not(.theme-toggle):not(.game-room-menu):not(.connection-status) { display: none; }
+  .hb-topbar-right > :not(.theme-toggle):not(.gm-music-toggle):not(.game-room-menu):not(.connection-status) { display: none; }
   .hb-topbar-right .connection-status span:not(.connection-dot) { display: none; }
+  /* 「服务已连接」是裸文字（上一条管不到）：手机顶栏只留绿点，给「轮到你了」和 ♪ 腾地方 */
+  .hb-topbar-right .connection-status { gap: 0; font-size: 0; }
   .hb-main { display: block; padding: 6px 0 12px; }
   .hb-stage { overflow: visible; background: transparent; box-shadow: none; }
   .hb-board { height: auto; padding: 0; gap: 8px; align-items: stretch; }
