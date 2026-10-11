@@ -18,7 +18,7 @@ export interface BoardLayout {
 
 export const CARD_W = 64;
 export const CARD_H = 96;
-const MATE_NAME_W = 88;
+const MATE_NAME_W = 104;
 const PANEL_PAD = 8;
 const ACTION_W = 236;
 
@@ -46,7 +46,7 @@ export function pickLayout(width: number, height: number, mateHands: readonly nu
     const matesH = rows * panelH + (rows - 1) * 10;
     const centerW = fwWidth(fw) + 32 + tokensWidth(token);
     const centerH = Math.max(fwHeight(fw), tokensHeight(token));
-    const mineW = cardsWidth(myCount, mine) + ACTION_W + 32 + 80;
+    const mineW = cardsWidth(myCount, mine) + ACTION_W + 32 + 104;
     const mineH = CARD_H * mine + 14;
     const totalH = matesH + centerH + mineH + 2 * 14 + 20;
     const maxW = Math.max(matesW, centerW, mineW) + 24;

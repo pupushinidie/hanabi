@@ -395,7 +395,6 @@ function GameBoard(props: GameBoardProps) {
                     const face = game.cards[card.id];
                     const selected = selection?.kind === "mine" && selection.id === card.id;
                     const common = {
-                      key: card.id,
                       scale: layout.mine,
                       lifted: selected,
                       glow: selected,
@@ -403,7 +402,7 @@ function GameBoard(props: GameBoardProps) {
                       onClick: spectating || !playing ? undefined : () => pickMyCard(card),
                       tutorial: `my-card-${k}`,
                     };
-                    return face ? <FaceCard {...common} face={face} known={card.clues} /> : <HiddenCard {...common} clues={card.clues} />;
+                    return face ? <FaceCard key={card.id} {...common} face={face} known={card.clues} /> : <HiddenCard key={card.id} {...common} clues={card.clues} />;
                   })}
                   {me.hand.length === 0 && <p className="hb-muted">手里没有牌了。</p>}
                 </div>
@@ -512,8 +511,8 @@ function MatePanel({ player, index, game, layout, member, active, selectedId, pr
               </button>
             );
           }
-          const common = { key: card.id, scale: layout.mate, glow, flash: flash[card.id], onClick: click, tutorial: `mate-${index}-card-${k}`, title: onPick ? "点这张牌给他提示" : "" };
-          return face ? <FaceCard {...common} face={face} known={card.clues} /> : <HiddenCard {...common} clues={card.clues} />;
+          const common = { scale: layout.mate, glow, flash: flash[card.id], onClick: click, tutorial: `mate-${index}-card-${k}`, title: onPick ? "点这张牌给他提示" : "" };
+          return face ? <FaceCard key={card.id} {...common} face={face} known={card.clues} /> : <HiddenCard key={card.id} {...common} clues={card.clues} />;
         })}
         {player.hand.length === 0 && <p className="hb-muted">手里没有牌了</p>}
       </div>
@@ -638,7 +637,7 @@ function ActionPanel(props: {
       <>
         <p className="hb-hint big">托管中</p>
         <p className="hb-hint">人机正在替你行动。</p>
-        <button className="primary-button" type="button" onClick={() => props.onAuto(false)}>取消托管</button>
+        <button className="primary-button hb-auto-cancel" type="button" onClick={() => props.onAuto(false)} data-tutorial="auto-cancel">取消托管</button>
       </>
     );
   } else if (mate && face) {

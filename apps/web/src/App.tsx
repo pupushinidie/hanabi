@@ -276,7 +276,7 @@ function App() {
   }
 
   return (
-    <main className="app-shell">
+    <main className="app-shell hb-home">
       <header className="topbar">
         <Brand />
         <div className="topbar-right">
@@ -295,10 +295,11 @@ function App() {
             麻烦的是：<b>每个人都看不到自己的手牌，只看得到队友的</b>。只能花提示标记告诉队友「这两张是红色」「这张是 3」，
             再凭推理出牌。打错 3 次全队失败。
           </p>
-          <img className="hb-hero" src={`${import.meta.env.BASE_URL}art/bg/night.png`} alt="" />
           <div className="hb-showcase" aria-hidden="true">
             {(["R1", "Y2", "G3", "B4", "W5"] as const).map((face) => <img key={face} src={art.card(face[0] as "R", Number(face[1]) as 1)} alt="" />)}
           </div>
+          {/* 在线牌桌放在左栏（首页一屏放下） */}
+          <OnlineRooms rooms={lobbyRooms} connected={connected} busy={busy} onJoin={joinListed} />
         </div>
 
         <section className="entry-card" aria-labelledby="entry-title">
@@ -403,7 +404,6 @@ function App() {
         <span className="how-divider" />
         <div className="how-item"><span className="how-number">03</span><span>开始对局</span></div>
       </section>
-      <OnlineRooms rooms={lobbyRooms} connected={connected} busy={busy} onJoin={joinListed} />
       <footer className="page-footer">只靠提示，把五色烟火放上夜空。</footer>
     </main>
   );

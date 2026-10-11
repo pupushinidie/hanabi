@@ -17,8 +17,16 @@
   margin-top: 24px;
   box-shadow: 0 0 0 var(--px) var(--edge), 0 0 0 calc(var(--px) * 2) var(--rim), 0 0 0 calc(var(--px) * 3) var(--edge);
 }
-.app-shell .hb-showcase { display: flex; gap: 8px; margin-top: -48px; padding-left: 16px; position: relative; }
+.app-shell .hb-showcase { display: flex; gap: 8px; margin: 16px 0 8px; }
+.app-shell.hb-home .welcome-grid { align-items: start; }
+.app-shell.hb-home .online-rooms { margin-top: 12px; padding: 16px 0 0; }
+.app-shell.hb-home .online-rooms-heading { margin-bottom: 8px; }
 .app-shell .hb-showcase img { width: 64px; height: 96px; }
+.hb-home .how-it-works { display: none; }
+.app-shell.hb-home .topbar { height: 60px; }
+.app-shell.hb-home .page-footer { padding: 8px 0 12px; }
+.app-shell.hb-home .welcome-grid { padding: 28px 0 24px; }
+.app-shell.hb-home .welcome-copy h1 { margin: 12px 0 10px; }
 .app-shell .hb-master-toggle { margin-top: 12px; text-align: left; }
 .app-shell .hb-room-best { margin: 8px 0 0; color: var(--gold); font-size: 24px; line-height: 1.25; }
 
@@ -39,6 +47,7 @@
 .hb-wait .room-secure-note { margin-top: 10px; }
 .hb-wait .room-settings { margin-top: 8px; }
 @media (max-width: 1180px) {
+  .app-shell.hb-home .page-footer { display: none; }
   .app-shell .hb-wait .room-heading h1 { font-size: 24px; }
   .hb-wait .room-layout { padding-top: 8px; }
   .app-shell .hb-wait .room-panel { padding: 10px 12px; }
@@ -128,7 +137,7 @@
 .hb-mate { display: flex; align-items: flex-start; gap: 8px; padding: 8px; }
 .hb-mate.active { --rim: var(--gold); }
 .hb-mate.pickable .hb-cardcol { cursor: pointer; }
-.hb-mate-head { display: flex; flex: 0 0 80px; flex-direction: column; gap: 4px; width: 80px; padding-top: 2px; }
+.hb-mate-head { display: flex; flex: 0 0 96px; flex-direction: column; gap: 4px; width: 96px; padding-top: 2px; }
 .hb-mate-head strong { overflow: hidden; color: #eef3fb; font-size: 24px; font-weight: 400; line-height: 1.1; white-space: nowrap; text-overflow: ellipsis; }
 .hb-tags { display: flex; flex-wrap: wrap; gap: 4px; }
 .hb-tag { flex: 0 0 auto; padding: 0 6px; color: #eef3fb; background: #263759; font-size: 12px; line-height: 20px; box-shadow: 0 0 0 var(--px) #04060c; }
@@ -188,7 +197,7 @@ button.hb-cardcol:hover .hb-card:not(.lifted) { transform: translateY(-4px); }
 /* 自己的手牌 + 操作 */
 .hb-mine { display: flex; align-items: flex-end; justify-content: center; gap: 16px; }
 .hb-hand { display: flex; align-items: flex-end; gap: 8px; padding-top: 12px; }
-.hb-hand-head { display: flex; flex-direction: column; align-items: flex-end; width: 72px; padding-bottom: 4px; }
+.hb-hand-head { display: flex; flex-direction: column; align-items: flex-end; width: 96px; padding-bottom: 4px; }
 .hb-hand-head strong { color: var(--gold); font-size: 24px; font-weight: 400; text-shadow: 2px 2px 0 #04060c; }
 .hb-hand-head span { color: #eef3fb; font-size: 12px; text-align: right; text-shadow: 2px 2px 0 #04060c; }
 .hb-actions { display: flex; flex-direction: column; gap: 8px; width: 236px; padding: 10px 12px; }
@@ -197,14 +206,14 @@ button.hb-cardcol:hover .hb-card:not(.lifted) { transform: translateY(-4px); }
 .hb-buttons { display: flex; flex-wrap: wrap; gap: 8px; }
 .hb-buttons.small .quiet-button { padding: 2px 8px; }
 .app-shell .hb-actions .primary-button { width: auto; margin-top: 0; font-size: 24px; }
-.hb-act {
+.app-shell .hb-act {
   display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 4px 10px 4px 6px;
   border: 0; color: #eef3fb; background: #263759; font: inherit; font-size: 24px; line-height: 1; cursor: pointer;
   box-shadow: 0 0 0 var(--px) #04060c, inset var(--px) var(--px) 0 0 #5a78ad, inset calc(var(--px) * -1) calc(var(--px) * -1) 0 0 #0b1120;
 }
-.hb-act img { width: 32px; height: 32px; }
-.hb-act:hover:not(:disabled) { background: #33497a; }
-.hb-act:disabled { cursor: not-allowed; filter: grayscale(0.6) brightness(0.7); }
+.app-shell .hb-act img { width: 32px; height: 32px; }
+.app-shell .hb-act:hover:not(:disabled) { background: #33497a; }
+.app-shell .hb-act:disabled { cursor: not-allowed; filter: grayscale(0.6) brightness(0.7); }
 .hb-choices { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; }
 .hb-choices li { color: #eef3fb; font-size: 12px; }
 .hb-choices li::before { content: "▸ "; color: var(--gold); }
@@ -249,7 +258,7 @@ button.hb-cardcol:hover .hb-card:not(.lifted) { transform: translateY(-4px); }
 
 /* 结算 */
 .app-shell .gm-panel.hb-result { width: min(560px, 100%); text-align: center; }
-.hb-result .hb-finale { margin: -6px auto 8px; box-shadow: 0 0 0 var(--px) var(--edge); }
+.hb-result .hb-finale { margin: -6px auto 8px; background-color: #141b3a; box-shadow: 0 0 0 var(--px) var(--edge); }
 .hb-final-score { margin: 4px 0; color: var(--gold); font-size: 24px; }
 .hb-final-score b { font-size: 48px; font-weight: 400; line-height: 1; }
 .hb-final-score span { display: block; margin-top: 4px; color: var(--text); font-size: 24px; }
@@ -308,7 +317,8 @@ button.hb-cardcol:hover .hb-card:not(.lifted) { transform: translateY(-4px); }
   /* 给提示时队友在下面，操作面板改成贴在屏幕底部的条 */
   .hb-actions.sheet { position: fixed; z-index: 40; left: 8px; right: 8px; bottom: 8px; background: rgba(12, 17, 32, 0.97); }
   .hb-mate { padding: 6px; }
-  .hb-mate-head { flex-basis: 64px; width: 64px; }
+  .hb-mate { flex-direction: column; gap: 4px; }
+  .hb-mate-head { flex: 0 0 auto; flex-direction: row; align-items: center; width: auto; padding: 0; }
   .hb-mate .hb-cards { gap: 6px; }
   .hb-minibtn { position: relative; padding: 0; border: 0; background: none; cursor: pointer; }
   .hb-minibtn:disabled { cursor: default; }
@@ -326,3 +336,13 @@ button.hb-cardcol:hover .hb-card:not(.lifted) { transform: translateY(-4px); }
   .hb-lanterns, .hb-danger { animation: none; }
   .hb-card { transition: none; }
 }
+
+/* 牌桌顶栏里的规则：展开成右上角的浮层，不撑开顶栏 */
+.hb-topbar .game-rules { position: static; margin: 0; }
+.app-shell .hb-topbar .game-rules-panel {
+  position: fixed; z-index: 50; top: 60px; right: 12px;
+  width: min(560px, calc(100vw - 24px)); max-height: calc(100vh - 80px); max-height: calc(100dvh - 80px);
+  overflow-y: auto; margin: 0; padding: 14px 16px; background: var(--panel);
+  display: block;
+}
+.app-shell .hb-topbar .game-rules-block + .game-rules-block { margin-top: 10px; }

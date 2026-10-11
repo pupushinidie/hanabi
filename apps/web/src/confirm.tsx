@@ -43,7 +43,7 @@ export function useConfirm(): [(request: ConfirmRequest) => Promise<boolean>, Re
         <p>{pending.detail}</p>
         <div className="gm-panel-actions">
           <button type="button" className="quiet-button" onClick={() => close(false)}>取消</button>
-          <button type="button" className="quiet-button danger" autoFocus onClick={() => close(true)}>{pending.confirmLabel}</button>
+          <button type="button" className="quiet-button danger" autoFocus data-tutorial="confirm-ok" onClick={() => close(true)}>{pending.confirmLabel}</button>
         </div>
       </section>
     </div>
