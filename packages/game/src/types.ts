@@ -106,8 +106,12 @@ export type LogEntry =
       readonly target: string;
       readonly kind: "color" | "rank";
       readonly value: Color | Rank;
-      /** 被标中的牌。 */
+      /** 被标中的牌（按摸牌顺序，新的在前）。 */
       readonly cardIds: number[];
+      /** 其中以前没收到过正提示、这次新标中的牌（同样新的在前）；人机把第一张当成这次提示的重点。 */
+      readonly fresh: number[];
+      /** 提示前对方的斩牌位（最早摸到、没被提示过的那张）；没有就不写。 */
+      readonly chopId?: number;
       readonly auto?: boolean;
     }
   | {

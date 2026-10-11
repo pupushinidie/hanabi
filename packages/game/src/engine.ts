@@ -293,6 +293,8 @@ function applyClue(state: GameState, actor: Player, command: ClueCommand, events
   const touched = clueTouches(state, target.hand, kind, value);
   if (touched.length === 0) throw new Error("对方手里没有这种牌，不能给空提示。");
   state.clueTokens -= 1;
+  const chop = chopCard(target.hand);
+  const freshSet = new Set(target.hand.filter((card) => touched.includes(card.id) && card.clues.color === undefined && card.clues.rank === undefined).map((card) => card.id));
   for (const card of target.hand) {
     const hit = touched.includes(card.id);
     card.marks.push({ turn: state.turn, from: actor.id, kind, value, touched: hit });
@@ -305,7 +307,8 @@ function applyClue(state: GameState, actor: Player, command: ClueCommand, events
     }
   }
   const ordered = byDrawOrder(target.hand).map((card) => card.id).filter((id) => touched.includes(id));
-  state.history.push({ turn: state.turn, type: "clue", player: actor.id, target: target.id, kind, value, cardIds: ordered, ...(auto ? { auto: true } : {}) });
+  const fresh = ordered.filter((id) => freshSet.has(id));
+  state.history.push({ turn: state.turn, type: "clue", player: actor.id, target: target.id, kind, value, cardIds: ordered, fresh, ...(chop ? { chopId: chop.id } : {}), ...(auto ? { auto: true } : {}) });
   events.push({ type: "Clued", player: actor.id, target: target.id, kind, value, cardIds: ordered });
 }
 
