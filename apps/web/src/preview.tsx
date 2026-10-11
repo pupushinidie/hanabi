@@ -30,7 +30,8 @@ import "./hanabi.css";
 import "./theme-day.css";
 
 const params = new URLSearchParams(location.search);
-const name = params.get("s") ?? "myTurn";
+const requested = params.get("s") ?? "myTurn";
+const name = [...SCENE_NAMES, "offline", "auto", "bots", "timeout", "spectate", "spectateAll", "waiting1", "waitingFull", "waitingBots"].includes(requested as SceneName) ? requested : "myTurn";
 const theme = params.get("theme") === "day" ? "day" : params.get("theme") === "night" ? "night" : readTheme();
 applyTheme(theme);
 
