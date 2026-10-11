@@ -155,6 +155,8 @@ function Preview() {
         watchId="p1"
         onWatch={() => {}}
         onLeave={() => {}}
+        selfSeat={EXTRA[name]?.spectate ? undefined as never : "p1"}
+        mode={params.get("mode") === "practice" ? "practice" : "online"}
       />
     </main>
   );

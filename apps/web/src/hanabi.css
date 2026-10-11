@@ -84,6 +84,7 @@
 .hb-timer { padding: 4px 8px; color: var(--gold); background: var(--panel); font-size: 24px; font-weight: 400; line-height: 1; box-shadow: 0 0 0 var(--px) var(--edge); }
 .hb-timer.low { color: var(--bad); }
 .hb-side-toggle { display: none; }
+.hb-mobile-bar { display: none; }
 
 .hb-main { display: grid; flex: 1 1 auto; grid-template-columns: minmax(0, 1fr) 320px; gap: 12px; min-height: 0; padding: 10px 0 12px; }
 
@@ -328,6 +329,9 @@ button.hb-cardcol:hover .hb-card:not(.lifted) { transform: translateY(-4px); }
   .hb-side:not(.open) { display: flex; }
   .hb-side-toggle { display: none; }
   .hb-log ol { max-height: 220px; }
+  .hb-side { flex-direction: column; }
+  .hb-mobile-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+  .hb-mobile-bar .connection-status { display: none; }
   .hb-banner { position: fixed; top: 52px; }
   .app-shell .gm-panel.hb-result { padding: 14px 12px; }
 }
@@ -346,3 +350,14 @@ button.hb-cardcol:hover .hb-card:not(.lifted) { transform: translateY(-4px); }
   display: block;
 }
 .app-shell .hb-topbar .game-rules-block + .game-rules-block { margin-top: 10px; }
+
+/* 「提示」按钮（练习局、一个人加人机的房间） */
+.app-shell .hb-hintbtn { align-self: flex-start; }
+.app-shell .hb-hintbtn.on { color: var(--gold); }
+.app-shell .hb-hintbtn kbd { display: none; margin-left: 4px; padding: 0 4px; color: var(--muted); font: inherit; font-size: 12px; box-shadow: 0 0 0 1px var(--rim); }
+@media (hover: hover) and (pointer: fine) { .app-shell .hb-hintbtn kbd { display: inline-block; } }
+
+/* 教程：侧栏的进度表，替换聊天 */
+.hb-chat .tut-checklist { flex: 1; padding: 8px 10px; }
+.app-shell .hb-chat .tut-checklist ul { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2px 8px; margin: 0; padding: 0; list-style: none; }
+.app-shell .hb-chat .tut-checklist li { font-size: 12px; }

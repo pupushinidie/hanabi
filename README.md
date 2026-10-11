@@ -69,6 +69,13 @@ BASE_PATH=/hanabi/ npm run build
   - `scene(name)` 按名字造常见局面（自己是 p1 甲），名字见 `SCENE_NAMES`：start / start3 / start5 / myTurn / clued / theirTurn / tokens8 / tokens0 / misfire2 / finalRound / late / endScore（14 分）/ endPerfect / endMisfire（0 分，进度 14）/ masterLost / master。对手离线、超时这种房间级的状态由预览页改 `members` 和 `turnRemainingMs`。
 - 房间：`CHAT_PRESETS`（对局中可发的短语）、`room:options {masterMode}`、快照里的 `options`、`best`。
 
+## 网页和教程
+
+- 牌桌 `apps/web/src/GameBoard.tsx`：按牌桌区域实测宽高挑牌的整数倍（`hanabi/layout.ts`），1× 时牌左上角叠 24px 数字；手机竖着排，第一屏是状态、烟火、自己的手牌和操作。
+- 预览页 `apps/web/preview.html?s=<场景>`（场景见 `src/preview.tsx` 的 SCENES，`&mode=practice` 看「提示」）。
+- 新手教程：`packages/game/src/tutorial.ts`（剧本、固定发牌）+ `apps/web/src/TutorialMode.tsx` + 共用教练层 `apps/web/src/tutorial/`（从欲罢不能复制）。首页、等候房间有入口，地址带 `?tutorial` 直接打开；学完接着和咕噜一号打完这局，练习局和「一个人 + 人机」的房间有「提示」按钮（键盘 H）。
+- 截图、走查脚本：`~/projects/qa-reports/tools/hanabi-play.mjs`（真打一局）、`hanabi-fit.mjs`（牌桌裁切）、`tut-hanabi.mjs`（教程走查）。
+
 ## 一个人怎么测
 
 ```bash

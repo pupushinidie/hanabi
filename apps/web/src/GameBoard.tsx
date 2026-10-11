@@ -22,6 +22,9 @@ import { pickLayout, labelH, type BoardLayout } from "./hanabi/layout.js";
 import { clueValueText, describe } from "./hanabi/log.js";
 import { GameRoomMenu, SpectateBar } from "./RoomExtras.js";
 import { socket } from "./socket.js";
+import { Coach, TipToast } from "./tutorial/Coach.js";
+import { useFirstTimeTips } from "./tutorial/tips.js";
+import { detectTips, GAME_ID, hintFor, TIPS, type Hint } from "./tutorialGame.js";
 
 export interface GameBoardProps {
   readonly room: LobbyRoomSnapshot;
@@ -44,15 +47,17 @@ export interface GameBoardProps {
   readonly onWatch: (playerId: string) => void;
   /** 观战的人离开。 */
   readonly onLeave: () => void;
-  /** 教程用：盖在牌桌上的教练框。 */
-  readonly overlay?: ReactNode;
-  /** 教程用：只允许这些操作（不给就都允许）。 */
-  readonly allow?: (command: GameCommand) => boolean;
-  /** 教程/练习：操作面板里多一块（比如「提示」按钮）。 */
-  readonly helper?: ReactNode;
   /** 自己的座位 id（预览页和教程用；联机时按 socket.id 找）。 */
   readonly selfSeat?: string;
+  /** online：真实对局；tutorial：剧本进行中（不弹确认框、不出提示和小贴士）；practice：练习局（随时能看提示）。 */
+  readonly mode?: "online" | "tutorial" | "practice";
+  /** 结算框里替代「再来一局」的按钮（练习局放「结束教程」「再练一局」）。 */
+  readonly finalActions?: ReactNode;
+  /** 教程用：界面上选中了什么（教程据此把高亮从牌挪到按钮上）。 */
+  readonly onUiState?: (ui: UiState) => void;
 }
+
+export type UiState = { readonly kind: "none" } | { readonly kind: "mine"; readonly cardId: number } | { readonly kind: "mate"; readonly cardId: number } | { readonly kind: "clue" };
 
 type Selection = { readonly kind: "mine"; readonly id: number } | { readonly kind: "mate"; readonly player: string; readonly id: number } | null;
 type Effect =
@@ -122,7 +127,7 @@ function Scene({ theme, w, h }: { theme: "day" | "night"; w: number; h: number }
 }
 
 function GameBoard(props: GameBoardProps) {
-  const { room, busy, error, notice, brand, connection, themeToggle, theme, chat, onCommand, onRematch, onAuto, onDissolve, watchId, onWatch, onLeave, overlay, allow, helper, selfSeat } = props;
+  const { room, busy, error, notice, brand, connection, themeToggle, theme, chat, onCommand, onRematch, onAuto, onDissolve, watchId, onWatch, onLeave, selfSeat, mode = "online", finalActions, onUiState } = props;
   const game = room.game!;
   const member = selfSeat ? room.members.find((m) => m.playerId === selfSeat) : room.members.find((candidate) => candidate.id === socket.id);
   // 观战的人没有座位：牌桌按 watchId 那位玩家的座位摆，但什么都不能点，也不叫「你」。
@@ -228,9 +233,8 @@ function GameBoard(props: GameBoardProps) {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  const permitted = (command: GameCommand) => !allow || allow(command);
+  const permitted = (_command: GameCommand) => true;
   const send = (command: GameCommand) => {
-    if (!permitted(command)) return;
     if (command.type !== "REORDER") setSelection(null);
     setClue(null);
     onCommand(command);
@@ -269,7 +273,8 @@ function GameBoard(props: GameBoardProps) {
   async function playOrDiscard(type: "PLAY" | "DISCARD") {
     if (!myCard || !myTurn) return;
     const position = me.hand.findIndex((c) => c.id === myCard.id) + 1;
-    const ok = type === "PLAY"
+    // 教程剧本里不弹确认框（咕噜嘎已经讲过这一步）
+    const ok = mode === "tutorial" ? true : type === "PLAY"
       ? await confirm({
           title: `打出左数第 ${position} 张？`,
           detail: game.misfires === 2
@@ -293,6 +298,38 @@ function GameBoard(props: GameBoardProps) {
     [order[index], order[target]] = [order[target]!, order[index]!];
     send({ type: "REORDER", order });
   }
+
+  // 教程：报告界面上选中了什么
+  useEffect(() => {
+    if (!onUiState) return;
+    if (clue) onUiState({ kind: "clue" });
+    else if (selection?.kind === "mate") onUiState({ kind: "mate", cardId: selection.id });
+    else if (selection?.kind === "mine") onUiState({ kind: "mine", cardId: selection.id });
+    else onUiState({ kind: "none" });
+  }, [selection, clue]);
+
+  // ---------- 「提示」：只有自己和人机时（练习局、一个人加人机的房间） ----------
+  const botsOnly = room.members.every((m) => m.playerId === myId || m.bot);
+  const canHint = !spectating && !autoPlaying && myTurn && (mode === "practice" || (mode === "online" && botsOnly));
+  const [hint, setHint] = useState<{ version: number; hint: Hint } | null>(null);
+  const shownHint = hint && hint.version === game.version && canHint ? hint.hint : null;
+  const toggleHint = () => setHint((current) => (current && current.version === game.version ? null : { version: game.version, hint: hintFor(game, myId) }));
+  useEffect(() => {
+    if (!canHint) return;
+    const onKey = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA")) return;
+      if (event.key.toLowerCase() === "h") toggleHint();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [canHint, game.version]);
+  const tips = useFirstTimeTips(GAME_ID, game.version, () => detectTips(game, myId), TIPS, mode === "online" && !spectating);
+  const helper = canHint ? (
+    <button className={shownHint ? "quiet-button hb-hintbtn on" : "quiet-button hb-hintbtn"} type="button" data-tutorial="hint" onClick={toggleHint}>
+      提示 <kbd>H</kbd>
+    </button>
+  ) : null;
 
   // ---------- 文案 ----------
   const lastEntry = game.history.at(-1);
@@ -455,12 +492,32 @@ function GameBoard(props: GameBoardProps) {
             )}
           </section>
           <div className="hb-chat">{chat}</div>
+          {/* 手机：顶栏放不下的按钮放到最下面 */}
+          <div className="hb-mobile-bar">
+            <GameRules masterMode={game.config.masterMode} />
+            {spectating && <button className="quiet-button" type="button" onClick={onLeave}>离开观战</button>}
+            {isHost && !selfSeat && <button className="quiet-button danger" type="button" onClick={onDissolve}>解散房间</button>}
+            {connection}
+          </div>
         </aside>
       </div>
       {game.phase === "finished" && (resultOpen
-        ? <ResultDialog game={game} room={room} spectating={spectating} mobile={layout.mobile} onRematch={onRematch} onLeave={onLeave} onHide={() => setResultOpen(false)} />
+        ? <ResultDialog game={game} room={room} spectating={spectating} mobile={layout.mobile} onRematch={onRematch} onLeave={onLeave} onHide={() => setResultOpen(false)} actions={finalActions} />
         : <button className="primary-button hb-result-reopen" type="button" onClick={() => setResultOpen(true)}>看结算</button>)}
-      {overlay}
+      {shownHint && (
+        <Coach
+          view={{
+            key: `hint-${game.version}`,
+            say: shownHint.say,
+            ...(shownHint.note ? { note: shownHint.note } : {}),
+            anchor: shownHint.anchor,
+            focus: false,
+            face: "think",
+            actions: <button className="quiet-button" type="button" onClick={() => setHint(null)}>知道了</button>,
+          }}
+        />
+      )}
+      {tips.tip && <TipToast tip={tips.tip} onClose={tips.dismiss} onNever={tips.never} />}
       {confirmDialog}
     </div>
   );
@@ -708,7 +765,8 @@ function ActionPanel(props: {
   );
 }
 
-function ResultDialog({ game, room, spectating, mobile, onRematch, onLeave, onHide }: {
+function ResultDialog({ game, room, spectating, mobile, onRematch, onLeave, onHide, actions }: {
+  actions?: ReactNode | undefined;
   game: GameState;
   room: LobbyRoomSnapshot;
   spectating: boolean;
@@ -750,7 +808,12 @@ function ResultDialog({ game, room, spectating, mobile, onRematch, onLeave, onHi
           </p>
         )}
         <div className="hb-rematch">
-          {spectating ? (
+          {actions ? (
+            <div className="gm-panel-actions">
+              <button className="quiet-button" type="button" onClick={onHide}>看牌桌</button>
+              {actions}
+            </div>
+          ) : spectating ? (
             <>
               <span>{room.rematch ? `等玩家决定要不要再来一局（${room.rematch.acceptedIds.length}/${room.members.length}）` : "对局结束"}</span>
               <div className="gm-panel-actions">

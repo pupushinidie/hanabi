@@ -22,6 +22,20 @@ export type { CreateOptions, NewPlayer, RedactOptions } from "./engine.js";
 export { buildGame, parseFace, scene, SCENE_NAMES } from "./scenes.js";
 export type { BuildOptions, CardSpec, Face, SceneName } from "./scenes.js";
 export { analyzeForTest, botCommand, botDecision } from "./bot.js";
+export {
+  anchorVisible,
+  commandAnchor,
+  createPracticeGame,
+  createTutorialGame,
+  createTutorialRng,
+  sameCommand,
+  TUTORIAL_RIVAL,
+  TUTORIAL_RIVAL_NAME,
+  TUTORIAL_SELF,
+  TUTORIAL_STACK,
+  TUTORIAL_STEPS,
+} from "./tutorial.js";
+export type { TutorialFace, TutorialRng, TutorialStep } from "./tutorial.js";
 export type { BotDecision, CardView } from "./bot.js";
 export { baselineCommand, randomCommand } from "./baseline.js";
 export { createRng } from "./rng.js";
