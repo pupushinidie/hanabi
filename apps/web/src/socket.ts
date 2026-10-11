@@ -5,7 +5,7 @@ import type { ClientToServerEvents, ServerToClientEvents } from "@hanabi/game";
 const serverUrl: string | undefined = import.meta.env.VITE_SERVER_URL;
 
 const options = {
-  // 部署在子路径（如 /cantstop/）时，Socket.IO 也走同一前缀。
+  // 部署在子路径（如 /hanabi/）时，Socket.IO 也走同一前缀。
   path: `${import.meta.env.BASE_URL}socket.io`,
   autoConnect: false,
   reconnection: true,

@@ -25,7 +25,8 @@ function normalizeRoomCode(value: string): string {
 function App() {
   const [mode, setMode] = useState<EntryMode>("create");
   const [name, setName] = useState("");
-  const [capacity, setCapacity] = useState<Capacity>(2);
+  const [capacity, setCapacity] = useState<Capacity>(3);
+  const [masterMode, setMasterMode] = useState(false);
   const [confirmAction, confirmDialog] = useConfirm();
   // 白天 / 夜间画面：首页、等候房间、牌桌共用，顶栏按钮随时切换；和游戏中心、其他游戏共用同一个选择。
   const [theme, toggleTheme] = useTheme();
@@ -134,7 +135,7 @@ function App() {
     };
 
     if (mode === "create") {
-      socket.emit("room:create", { name: nickname, capacity }, complete);
+      socket.emit("room:create", { name: nickname, capacity, masterMode }, complete);
     } else {
       socket.emit("room:join", { name: nickname, code: roomCode }, complete);
     }
@@ -150,7 +151,7 @@ function App() {
         return;
       }
       setRoom(response.data);
-      setNotice("对局已开始，祝你好运。" );
+      setNotice("对局开始：打牌时别在语音里提自己或别人的牌。");
     });
   }
 
@@ -217,7 +218,7 @@ function App() {
     const players = room.game.players;
     const watched = players.some((player) => player.id === watchId) ? watchId : players[0]!.id;
     return (
-      <main className="app-shell cs-game">
+      <main className="app-shell hb-game">
         <GameBoard
           room={room}
           busy={busy}
@@ -226,6 +227,7 @@ function App() {
           brand={<Brand />}
           connection={<ConnectionStatus connected={connected} />}
           themeToggle={themeToggle}
+          theme={theme === "day" ? "day" : "night"}
           chat={<RoomChat room={room} voice={voice} />}
           onCommand={submitGameCommand}
           onRematch={voteRematch}
@@ -242,7 +244,7 @@ function App() {
 
   if (room) {
     return (
-      <main className="app-shell">
+      <main className="app-shell hb-waitpage">
         <header className="topbar">
           <Brand />
           <div className="topbar-right">
@@ -250,7 +252,7 @@ function App() {
             <ConnectionStatus connected={connected} />
           </div>
         </header>
-        <GameRules />
+        <div className="hb-wait">
         <RoomView
           room={room}
           busy={busy}
@@ -263,8 +265,11 @@ function App() {
           onAddBot={addBot}
           onDissolve={dissolveRoom}
         />
-        <RoomChat room={room} voice={voice} />
-        <footer className="page-footer">再掷一次，还是就此扎营？</footer>
+        <div className="hb-wait-side">
+          <GameRules />
+          <RoomChat room={room} voice={voice} />
+        </div>
+        </div>
         {confirmDialog}
       </main>
     );
@@ -283,15 +288,16 @@ function App() {
 
       <section className="welcome-grid">
         <div className="welcome-copy">
-          <div className="eyebrow"><span className="eyebrow-line" /> 在线对战 · 2–4 人 · 测试版</div>
-          <h1>欲罢不能</h1>
+          <div className="eyebrow"><span className="eyebrow-line" /> 在线合作 · 2–5 人 · 一个人也能和人机玩</div>
+          <h1>花火</h1>
           <p className="welcome-description">
-            掷 4 颗骰子，两两分组，带着 3 个登山者往 2–12 号登山路上爬。
-            每爬一步都要选：再掷一次继续冒险，还是收手扎营保住进度？贪心爆掉，这回合就白爬了。
-            先登顶 3 条路的人获胜。创建一间私人房间，或输入房间码加入朋友的对局；人不够可以加人机。
+            大家是一队烟火师，要把红、黄、绿、蓝、白五色烟火各按 1→5 放上夜空，满分 25。
+            麻烦的是：<b>每个人都看不到自己的手牌，只看得到队友的</b>。只能花提示标记告诉队友「这两张是红色」「这张是 3」，
+            再凭推理出牌。打错 3 次全队失败。
           </p>
-          <img className="cs-hero" src={art.card("R", 5)} alt="" />
-          <div className="cs-showcase" aria-hidden="true">
+          <img className="hb-hero" src={`${import.meta.env.BASE_URL}art/bg/night.png`} alt="" />
+          <div className="hb-showcase" aria-hidden="true">
+            {(["R1", "Y2", "G3", "B4", "W5"] as const).map((face) => <img key={face} src={art.card(face[0] as "R", Number(face[1]) as 1)} alt="" />)}
           </div>
         </div>
 
@@ -356,6 +362,9 @@ function App() {
                     </button>
                   ))}
                 </div>
+                <button type="button" className={masterMode ? "room-setting on hb-master-toggle" : "room-setting hb-master-toggle"} aria-pressed={masterMode} onClick={() => setMasterMode(!masterMode)}>
+                  <i aria-hidden="true" /> 大师模式（牌堆摸完不停，打满 25 分才算赢）
+                </button>
                 <p className="field-hint">至少 2 位玩家后，房主即可开始；空座位可以加人机。</p>
               </>
             ) : (
@@ -395,16 +404,16 @@ function App() {
         <div className="how-item"><span className="how-number">03</span><span>开始对局</span></div>
       </section>
       <OnlineRooms rooms={lobbyRooms} connected={connected} busy={busy} onJoin={joinListed} />
-      <footer className="page-footer">再掷一次，还是就此扎营？</footer>
+      <footer className="page-footer">只靠提示，把五色烟火放上夜空。</footer>
     </main>
   );
 }
 
 function Brand() {
   return (
-    <a className="brand" href={import.meta.env.BASE_URL} aria-label="欲罢不能首页">
+    <a className="brand" href={import.meta.env.BASE_URL} aria-label="花火首页">
       <span className="brand-mark" aria-hidden="true"><i /><i /><i /></span>
-      <span className="brand-name">欲罢不能<span> CAN'T STOP</span></span>
+      <span className="brand-name">花火<span> 合作烟火</span></span>
     </a>
   );
 }
@@ -418,7 +427,7 @@ function ConnectionStatus({ connected }: { connected: boolean }) {
   );
 }
 
-function RoomView({
+export function RoomView({
   room,
   busy,
   error,
@@ -496,15 +505,18 @@ function RoomView({
                   )}
                 </div>
               ))}
-              {Array.from({ length: openSeats }, (_, index) => (
-                <div className="player-row open-seat" key={`open-${index}`}>
+              {/* 空座位合成一行（5 人房一屏放下）：写还空几个，「加人机」每点一次补一个 */}
+              {openSeats > 0 && (
+                <div className="player-row open-seat">
                   <div className="empty-avatar"><span>＋</span></div>
-                  <div className="player-details"><strong>等待玩家加入</strong><span>{room.access.open ? "公开房间，路过的人也能加入" : "分享房间码邀请朋友"}</span></div>
+                  <div className="player-details"><strong>还有 {openSeats} 个空座位</strong><span>{room.access.open ? "公开房间，路过的人也能加入" : "分享房间码邀请朋友，或者加人机"}</span></div>
                   {isHost && <button className="quiet-button add-bot-button" type="button" onClick={onAddBot} disabled={busy}>加人机</button>}
                 </div>
-              ))}
+              )}
             </div>
-            <p className="field-hint">每一步限时 45 秒：没掷骰就超时跳过这回合，掷了骰子后超时自动收手。</p>
+            <p className="field-hint">每回合 90 秒，超时自动弃牌或给提示（不会替你出牌），连续超时 2 次转人机托管。语音里别提牌。</p>
+            {room.best.games > 0 && <p className="hb-room-best">本房间已打 {room.best.games} 局{room.best.score !== undefined ? ` · 最高 ${room.best.score} 分` : ""}{room.best.masterWins ? ` · 大师模式打满 ${room.best.masterWins} 次` : ""}</p>}
+            <MasterModeSwitch room={room} isHost={isHost} />
             <RoomSettingsPanel room={room} />
             <SeatSwitch room={room} />
             <div className="room-actions">
@@ -525,6 +537,22 @@ function RoomView({
       {notice && <p className="feedback feedback-success room-feedback" role="status">{notice}</p>}
       <div className="room-secure-note"><span>◇</span> {room.access.open ? "公开房间：首页列表里的人可以直接加入空座位。" : "邀请制：要有房间码才能加入；首页列表不显示房间码。"}</div>
     </section>
+  );
+}
+
+/** 等候房间里的大师模式开关（只有房主能改）。 */
+function MasterModeSwitch({ room, isHost }: { room: LobbyRoomSnapshot; isHost: boolean }) {
+  const on = room.options.masterMode;
+  if (!isHost) return <p className="field-hint">玩法：{on ? "大师模式（打满 25 分才算赢）" : "普通模式"}</p>;
+  return (
+    <button
+      type="button"
+      className={on ? "room-setting on hb-master-toggle" : "room-setting hb-master-toggle"}
+      aria-pressed={on}
+      onClick={() => socket.emit("room:options", { masterMode: !on }, () => {})}
+    >
+      <i aria-hidden="true" /> 大师模式：牌堆摸完不停，打满 25 分才算赢
+    </button>
   );
 }
 

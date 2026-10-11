@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import type { LobbyRoomSnapshot } from "@hanabi/game";
+import { CHAT_PRESETS, type LobbyRoomSnapshot } from "@hanabi/game";
 import { socket } from "./socket.js";
 import type { VoiceControls } from "./voice.js";
 import VoiceBar from "./VoiceBar.js";
@@ -24,6 +24,19 @@ function RoomChat({ room, voice }: { room: LobbyRoomSnapshot; voice: VoiceContro
     if (list) list.scrollTop = list.scrollHeight;
   }, [lastMessageId]);
 
+  // 对局进行中只能发预设短语（花火只能靠提示交流）
+  const presetsOnly = room.status === "playing" && room.game?.phase === "playing";
+
+  function sendPreset(message: string) {
+    if (sending) return;
+    setSending(true);
+    setError("");
+    socket.emit("room:chat", { message }, (response) => {
+      setSending(false);
+      if (!response.ok) setError(response.error);
+    });
+  }
+
   function sendMessage(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const message = draft.trim();
@@ -44,7 +57,7 @@ function RoomChat({ room, voice }: { room: LobbyRoomSnapshot; voice: VoiceContro
     <section className="room-chat light" aria-labelledby="room-chat-title">
       <div className="room-chat-heading">
         <h2 id="room-chat-title">房间对话</h2>
-        <span>仅房间内可见 · 对局结束后自动清空</span>
+        <span>{presetsOnly ? "对局中只能发短语 · 语音里也别提牌" : "仅房间内可见 · 对局结束后自动清空"}</span>
       </div>
       <VoiceBar room={room} voice={voice} />
       <div className="room-chat-list" ref={listRef} aria-live="polite">
@@ -58,6 +71,13 @@ function RoomChat({ room, voice }: { room: LobbyRoomSnapshot; voice: VoiceContro
           </div>
         )) : <p className="room-chat-empty">还没有消息，打个招呼吧。</p>}
       </div>
+      {presetsOnly ? (
+        <div className="room-chat-presets">
+          {CHAT_PRESETS.map((phrase) => (
+            <button key={phrase} className="room-chat-send" type="button" disabled={sending} onClick={() => sendPreset(phrase)}>{phrase}</button>
+          ))}
+        </div>
+      ) : (
       <form className="room-chat-form" onSubmit={sendMessage}>
         <input
           className="room-chat-input"
@@ -69,6 +89,7 @@ function RoomChat({ room, voice }: { room: LobbyRoomSnapshot; voice: VoiceContro
         />
         <button className="room-chat-send" type="submit" disabled={sending || !draft.trim()}>发送</button>
       </form>
+      )}
       {error && <p className="room-chat-error" role="alert">{error}</p>}
     </section>
   );
