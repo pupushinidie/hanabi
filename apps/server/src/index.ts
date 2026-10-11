@@ -8,9 +8,11 @@ import {
   applyCommand,
   botCommand,
   CAPACITY_OPTIONS,
+  CHAT_PRESETS,
   createGame,
   DEFAULT_ROOM_ACCESS,
   redactGameForViewer,
+  scoreOf,
   timeoutTurn,
   type Capacity,
   type ClientToServerEvents,
@@ -22,6 +24,8 @@ import {
   type LobbyRoomSnapshot,
   type PublicRoomSummary,
   type RoomAccess,
+  type RoomBest,
+  type RoomOptions,
   type RoomChatMessage,
   type ServerToClientEvents,
   type Spectator,
@@ -33,6 +37,10 @@ interface RoomState {
   /** 对外展示用的随机标识，不泄露房间码。 */
   publicId: string;
   capacity: Capacity;
+  /** 房主选的玩法（大师模式）。 */
+  options: RoomOptions;
+  /** 本房间的最高分，只存在内存里（补充 3.6）。 */
+  best: RoomBest;
   status: "waiting" | "playing";
   ownerId: string;
   members: LobbyMember[];
@@ -72,7 +80,7 @@ const MAX_SPECTATORS = 20;
 /** 每一步的计时（毫秒）；默认用规则里的 stepTimeoutSec，测试时可以用环境变量缩短。 */
 const TURN_MS_OVERRIDE = process.env.TURN_MS ? Number(process.env.TURN_MS) : undefined;
 /** 人机的名字，按顺序取第一个没人用的。 */
-const BOT_NAMES = ["咕噜一号", "咕噜二号", "咕噜三号"];
+const BOT_NAMES = ["咕噜一号", "咕噜二号", "咕噜三号", "咕噜四号"];
 /** 人机每一步的停顿乘上这个倍数；测试时设成 0 让人机立刻行动。 */
 const BOT_DELAY_SCALE = Number(process.env.BOT_DELAY_SCALE ?? 1);
 /** 离线的人轮到时先等这么久再由人机代打（刷新页面、短暂断线的人来得及回来）。 */
@@ -169,6 +177,8 @@ function snapshot(room: RoomState, viewerId: string): LobbyRoomSnapshot {
     spectators: room.spectators.map((spectator) => ({ ...spectator })),
     access: { ...room.access },
     capacity: room.capacity,
+    options: { ...room.options },
+    best: { ...room.best },
     status: room.status,
     members: room.members.map((member) => ({ ...member })),
     chat: room.chat.map((entry) => ({ ...entry })),
@@ -179,9 +189,9 @@ function snapshot(room: RoomState, viewerId: string): LobbyRoomSnapshot {
   };
 }
 
-/** 观战的人看到的对局：欲罢不能没有藏起来的信息，和玩家看到的一样（牌堆顺序、种子等去掉）。 */
+/** 观战的人看到的对局：房主开了「观战看手牌」才看得到所有人的手牌，否则只看提示；牌堆和种子始终看不到。 */
 function spectatorGame(room: RoomState): GameState {
-  return redactGameForViewer(room.game!, "");
+  return redactGameForViewer(room.game!, "", { seeAll: room.access.spectatorsSeeAll });
 }
 
 function isSpectator(room: RoomState, socketId: string): boolean {
@@ -225,6 +235,7 @@ function roomSummaries(): PublicRoomSummary[] {
         id: room.publicId,
         status,
         capacity: room.capacity,
+        ...(room.options.masterMode ? { masterMode: true } : {}),
         open: room.access.open,
         allowSpectators: room.access.allowSpectators,
         spectators: room.spectators.length,
@@ -236,9 +247,10 @@ function roomSummaries(): PublicRoomSummary[] {
             connected: member.connected,
             ...(member.bot ? { bot: true } : {}),
             ...(player ? {
-              score: player.score,
+              // 合作游戏：每个人显示全队得分
+              score: game!.result ? game!.result.score : scoreOf(game!),
               isActive: game!.phase !== "finished" && game!.players[game!.currentPlayer]?.id === player.id,
-              isWinner: game!.finalResult?.winner === player.id,
+              isWinner: game!.result?.won === true,
             } : {}),
           };
         }),
@@ -431,7 +443,8 @@ function updateTurnTimer(room: RoomState): void {
     clearGameTimers(room);
     return;
   }
-  const key = `${game.turn}:${game.step}`;
+  // 计时按回合：整理手牌（不算一回合）不会重置倒计时
+  const key = `${game.turn}`;
   const playerId = game.players[game.currentPlayer]!.id;
   if (robotSeat(room, playerId)) {
     clearTurnTimer(room);
@@ -447,29 +460,20 @@ function updateTurnTimer(room: RoomState): void {
   setTurnDeadline(room, Date.now() + (TURN_MS_OVERRIDE ?? game.config.stepTimeoutSec * 1000), key);
 }
 
-/** 人机每一步前停多久：让大家看清骰子、爬山和爆掉 / 登顶的横幅。 */
+/** 人机每一步前停多久：让大家看清上一步（提示亮起、烟火升空）。 */
 function botDelay(room: RoomState, game: GameState, playerId: string): number {
-  const jitter = 400 * Math.random();
-  let ms: number;
-  if (game.stage === "choose") {
-    // 刚掷完：骰子滚动 650 ms，再看一眼选项
-    ms = 1500 + jitter;
-  } else if (game.stage === "decide") {
-    ms = 800 + jitter;
-  } else {
-    // 新回合：上一回合有人爆掉或登顶的话，等横幅播完
-    const dramatic = game.events.some((event) => event.type === "Busted" || event.type === "ColumnClaimed");
-    ms = (dramatic ? 2600 : 1000) + jitter;
-    const member = room.members.find((candidate) => candidate.playerId === playerId);
-    if (member && !member.bot && !member.connected) ms = Math.max(ms, OFFLINE_GRACE_MS);
-  }
+  const jitter = 600 * Math.random();
+  const dramatic = game.events.some((event) => event.type === "Played" || event.type === "FinalRound");
+  let ms = (dramatic ? 2200 : 1500) + jitter;
+  const member = room.members.find((candidate) => candidate.playerId === playerId);
+  if (member && !member.bot && !member.connected) ms = Math.max(ms, OFFLINE_GRACE_MS);
   return ms * BOT_DELAY_SCALE;
 }
 
 function runBot(room: RoomState, key: string): void {
   if (room.botTimer?.key === key) delete room.botTimer;
   const game = room.game;
-  if (rooms.get(room.code) !== room || !game || game.phase === "finished" || `${game.turn}:${game.step}` !== key) return;
+  if (rooms.get(room.code) !== room || !game || game.phase === "finished" || `${game.turn}` !== key) return;
   const playerId = game.players[game.currentPlayer]!.id;
   if (!robotSeat(room, playerId)) return;
   try {
@@ -498,6 +502,7 @@ function expireTurn(room: RoomState): void {
 function afterGameChange(room: RoomState): void {
   if (room.game?.phase === "finished") {
     clearGameTimers(room);
+    recordBest(room, room.game);
     room.chat = [];
     void logFinishedGame(room.game);
     startRematchVote(room);
@@ -506,12 +511,25 @@ function afterGameChange(room: RoomState): void {
   updateTurnTimer(room);
 }
 
+/** 记下本房间的最高分（普通模式）和大师模式打满的次数。 */
+function recordBest(room: RoomState, game: GameState): void {
+  const result = game.result;
+  if (!result) return;
+  const best: { score?: number; masterWins?: number; games: number } = { ...room.best, games: room.best.games + 1 };
+  if (game.config.masterMode) {
+    if (result.won) best.masterWins = (best.masterWins ?? 0) + 1;
+  } else {
+    best.score = Math.max(best.score ?? 0, result.score);
+  }
+  room.best = best;
+}
+
 /** 种子用服务端的安全随机数生成；所有骰子都在服务端掷。新的一局托管和超时次数都清零。 */
 function newGame(room: RoomState, seed = randomInt(2 ** 32 - 1)): GameState {
   for (const member of room.members) setAuto(room, member.playerId, false);
   room.timeouts.clear();
   clearGameTimers(room);
-  return createGame(room.members.map((member) => ({ id: member.playerId, name: member.name })), seed);
+  return createGame(room.members.map((member) => ({ id: member.playerId, name: member.name })), seed, { masterMode: room.options.masterMode });
 }
 
 /** 记录一局的种子、玩家和动作序列，同一种子重放这串动作就能复现整局。 */
@@ -521,7 +539,9 @@ async function logFinishedGame(game: GameState): Promise<void> {
     const entry = {
       endedAt: new Date().toISOString(),
       seed: game.seed,
-      players: game.players.map((player) => ({ id: player.id, name: player.name, score: player.score })),
+      players: game.players.map((player) => ({ id: player.id, name: player.name })),
+      masterMode: game.config.masterMode,
+      result: game.result,
       log: game.log,
     };
     await appendFile(GAME_LOG, JSON.stringify(entry) + "\n");
@@ -638,7 +658,7 @@ io.on("connection", (socket) => {
       return;
     }
     if (!isCapacity(payload?.capacity)) {
-      ack({ ok: false, error: "房间人数必须是 2–4 人。" });
+      ack({ ok: false, error: "房间人数必须是 2–5 人。" });
       return;
     }
 
@@ -659,6 +679,8 @@ io.on("connection", (socket) => {
       code,
       publicId: randomUUID(),
       capacity: payload.capacity,
+      options: { masterMode: payload?.masterMode === true },
+      best: { games: 0 },
       status: "waiting",
       ownerId: socket.id,
       members: [{ id: socket.id, playerId: "p1", name: normalizeName(payload.name)!, isHost: true, connected: true }],
@@ -783,6 +805,26 @@ io.on("connection", (socket) => {
     socketRooms.set(socket.id, code);
     void socket.join(code);
     ack({ ok: true, data: snapshot(room, socket.id) });
+    emitRoomUpdate(room);
+  });
+
+  socket.on("room:options", (settings, ack) => {
+    const room = findRoomForSocket(socket.id);
+    if (!room || room.ownerId !== socket.id) {
+      ack({ ok: false, error: "只有房主可以修改玩法。" });
+      return;
+    }
+    if (room.status !== "waiting") {
+      ack({ ok: false, error: "对局中不能改玩法。" });
+      return;
+    }
+    const masterMode = settings?.masterMode;
+    if (masterMode !== undefined && typeof masterMode !== "boolean") {
+      ack({ ok: false, error: "设置内容不正确。" });
+      return;
+    }
+    if (masterMode !== undefined) room.options = { ...room.options, masterMode };
+    ack({ ok: true, data: undefined });
     emitRoomUpdate(room);
   });
 
@@ -1130,6 +1172,11 @@ io.on("connection", (socket) => {
       ack({ ok: false, error: `消息需为 1–${ROOM_CHAT_MAX_LENGTH} 个字符。` });
       return;
     }
+    // 对局进行中只能发预设短语（开工拍板：花火只能靠提示交流）；等候和结算时照常自由聊天
+    if (room.status === "playing" && room.game?.phase === "playing" && !(CHAT_PRESETS as readonly string[]).includes(message)) {
+      ack({ ok: false, error: "对局中只能发预设短语。" });
+      return;
+    }
     const now = Date.now();
     if (now - (roomChatTimes.get(socket.id) ?? 0) < ROOM_CHAT_RATE_LIMIT_MS) {
       ack({ ok: false, error: "发送太快了，请稍等一下。" });
@@ -1168,6 +1215,18 @@ export const testHooks = {
     if (!room) throw new Error("no room");
     room.game = newGame(room, seed);
     updateTurnTimer(room);
+    emitRoomUpdate(room);
+  },
+  /** 服务器上的完整对局（含牌堆），测试用来对照有没有泄露。 */
+  getGame(code: string): GameState | undefined {
+    return rooms.get(code)?.game;
+  },
+  /** 换成指定的精确局面（预览工厂造的），测试终局、最后一轮用。 */
+  setGame(code: string, game: GameState): void {
+    const room = rooms.get(code);
+    if (!room) throw new Error("no room");
+    room.game = game;
+    afterGameChange(room);
     emitRoomUpdate(room);
   },
   /** 让当前回合立即超时。 */

@@ -1,73 +1,96 @@
-# 欲罢不能（Can't Stop）
+# 花火
 
-2–4 人的掷骰登山桌游，网页联机版。掷 4 颗骰子两两分组，带着 3 个登山者往 2–12 号登山路上爬；每爬一步都要选再掷还是收手扎营，爆掉就白爬。先登顶 3 条路的人获胜。名字、美术和规则说明文字都是自己的。
+2–5 人的**合作**卡牌游戏，网页联机（一个人也能和人机一起打）。全队一起把红、黄、绿、蓝、白五色烟火各按 1→5 的顺序放上天，满分 25。难点是：**每个人都看不到自己的手牌，只看得到队友的**，只能靠有限的「提示」互相告诉对方手里有什么。
 
-线上地址：<https://gulugagame.com/cantstop/>
+线上地址：<https://gulugagame.com/hanabi/>（待上线）
 
 ## 本地运行
 
 ```bash
 npm install
-npm run dev          # 服务端 :3008，网页 :5181
-npm test             # 规则引擎（29 个用例，含 300 局随机模拟）
+npm run dev          # 服务端 :3024，网页 :5295（端口可用 SERVER_PORT / WEB_PORT 改）
+npm test             # 规则引擎 + 服务器测试
 npm run typecheck
+BASE_PATH=/hanabi/ npm run build
 ```
 
-一个人测试：`node scripts/test-bot.mjs host 2 1` 会让机器人建一个 2 人房并打印房间码，你在网页里用房间码加入凑满后自动开局。机器人随机挑走法，推进后按「再掷爆掉的概率」决定收手还是再掷。`BOT_DELAY_MS` 调思考时间，`BOT_IDLE=1` 只挂着不动，`BOT_GREEDY=1` 更贪（方便看爆掉）。`node scripts/test-bot.mjs host 3 3` 是三个机器人自己打完一整局。
+改了 `packages/game` 先 `npm run build:game`，服务器和测试读的是 `packages/game/dist`。
 
-## 规则要点
+## 规则（自己的话）
 
-- 11 条赛道编号 2–12，格数 3/5/7/9/11/13/11/9/7/5/3。
-- 掷 4 颗骰子，三种两两分组任选一种；两个和都能走必须都走，只能走一个时任选一个；两个和相同就在同一条路爬 2 格。
-- 3 个临时标记（登山者）：每回合最多推进 3 条不同赛道。新上一条路时从自己的营地上方一格开始。
-- 推进后选再掷或收手：收手时登山者变成营地；登山者在顶格时收手就占领这条路（撤下别人在这条路上的营地，赛道关闭）。
-- 怎么分组都走不了就爆掉，本回合进度全部作废，之前的营地不动。
-- 先占领 3 条赛道立即获胜（一次收手可能同时占领两条）。
+- **配件**：50 张烟火牌（5 色 × 10 张：每色 1 有三张、2/3/4 各两张、5 只有一张），8 个提示标记，3 个失误标记。
+- **开局**：洗牌，2–3 人每人 5 张、4–5 人每人 4 张，牌背对自己拿着。8 个提示标记都在。随机一个人先手，之后按座位轮流。
+- **轮到你**，三件事选一件：
+  1. **给提示**（要有提示标记，花 1 个）：选一位队友 + 一种颜色或一个数字，系统把他手里所有符合的牌都标出来，其余的牌记上「不是红」「不是 3」。不能提示对方一张都没有的颜色/数字。
+  2. **弃牌**（提示标记不满 8 个才能弃）：弃掉自己一张牌（大家都看得到），拿回 1 个提示标记，摸 1 张。
+  3. **出牌**：打出自己一张牌。能接上那种颜色当前的最大数字（+1）就放上去；接不上算**打错**，牌进弃牌堆，用掉 1 个失误标记。打出 5（完成一种颜色）再拿回 1 个提示标记（满 8 个就不拿）。然后摸 1 张。
+- **结束**：
+  - 打错第 3 次：立即失败，**全队 0 分**（结算页另外显示失败前的进度）。
+  - 五色都打到 5：立即结束，25 分。
+  - 牌堆摸完：从摸走最后一张的人的下家开始，每人再行动一次，**摸最后一张的人最后行动**；这期间不再摸牌。然后按五色各自的最大数字相加计分。
+- **评价**：0–5 糟糕、6–10 平庸、11–15 还行、16–20 精彩、21–24 惊艳、25 传奇。
 
-### 规格书没写清、按默认值实现的地方
+## 默认规则表（规则书没写死 / 开工拍板 / 全站约定）
 
-| 情况 | 现在的做法 |
-|---|---|
-| 一种分组的两个和只能走一个 | 两个都列成选项，玩家任选一个（标准规则） |
-| 登山者离顶只差 1 格却掷出同一个和两次 | 只走 1 格到顶，第二步作废，这算合法走法 |
-| 已经在顶格的登山者又掷到这条路 | 这条路走不了（不算可用的和） |
-| 回合计时 | 每一步 45 秒：回合开始没掷骰就超时→跳过这回合；掷了骰没选→自动选第一种走法并收手；推进后没决定→收手 |
-| 收手前提示 | 界面显示「再掷爆掉的概率」（枚举 6⁴ 种结果），可以隐藏 |
-| 人机 | 房主在等待时点空座位上的「加人机」（咕噜一号 / 二号 / 三号，普通难度），移出用「移出」；一个人加满人机也能开局。人机总是同意再来一局 |
-| 托管 | 连续超时 2 次转托管，由人机代打；自己动一下或点「取消托管」就交还。离线的人轮到时先等 3 秒，再由人机代打（不算超时）；用原昵称回来就交还 |
+| 项目 | 这里的做法 | 来源 |
+|---|---|---|
+| 打错 3 次 | 记 0 分，结算页另外显示失败前进度 | 他拍板 |
+| 空提示（「你没有红色」） | 不允许，提示必须标中至少一张 | 开工拍板 |
+| 提示标在牌上 | 标：正提示（已知颜色/数字）+ 排除信息（不是红、不是 3） | 开工拍板 |
+| 对局中文字聊天 | 只能发预设短语：好、抱歉、想一下、好球！、谢谢、加油（观战的人也一样）；等候房间和结算时自由聊天；语音照常，开局提醒一句别在语音里提牌 | 开工拍板 |
+| 大师模式（可选，默认关） | 房主建房时勾选（等候时也能改）。牌堆摸完不进最后一轮，一直打到 25 分才算赢；打错 3 次或某张还需要的牌已经全部进了弃牌堆就失败，失败都记 0 分 | 开工拍板 / 规则书第 8 节 |
+| 大师模式里手里没牌又没提示标记 | 自动跳过这个人的回合（日志写「跳过」） | 实现补漏 |
+| 整理手牌 | 任何时候都能拖动整理自己的手牌，不算一回合、不重置倒计时；提示跟着牌走。引擎另记摸牌顺序，人机和超时规则按摸牌顺序算「最新/最早」 | 补充 3.3 |
+| 先手 | 随机 | 规则书第 3 节 |
+| 本房间最高分 | 只存在房间内存里，同一房间「再来一局」时显示（普通模式最高分、大师模式打满次数） | 补充 3.6 |
+| 观战 | 默认可观战；观战默认**看不到任何人的手牌**（只看提示，防止有人开小号看自己的牌），房主可以开「观战看手牌」；牌堆顺序始终看不到 | 全站约定 + 本游戏防作弊 |
+| 人机 | 一个人也能开局：1 真人 + 1–4 个人机（咕噜一号…四号，带「人机」标签，只有「普通」难度） | 全站约定 |
+
+## 超时规则
+
+- 每回合 90 秒（`config.stepTimeoutSec`，测试可用环境变量 `TURN_MS` 缩短）。
+- 超时自动行动**绝不出牌**：提示标记不满 8 个 → 弃掉最早摸到、没被提示过的那张（都被提示过就弃最早摸到的）；8 个全在 → 给第一个手里有牌的队友（从下家起）提示他最新那张牌的颜色；都做不了就跳过。
+- 连续 2 次超时转托管（人机代打），自己动一下或点「取消托管」就交还；离线的人轮到时等 3 秒由人机代打，用原昵称加房间码回来接着打。
+
+## 隐藏信息
+
+- 引擎状态里手牌（`HandCard`）**从来不带牌面**，牌面只在 `GameState.cards` 表里；卡牌 id 是 0–49 的随机排列。
+- `redactGameForViewer(state, viewerId, { seeAll? })` 删掉牌堆、种子、随机数状态、动作序列，`cards` 表只留弃牌堆、已打出的、别人手里的。观战（viewerId 不是座位）默认看不到任何手牌，`seeAll` 时看得到所有手牌。
+- 摸牌事件 `Drew` 只有 cardId。
+- 测试：`packages/game/test/engine.test.ts`（每个视角）、`apps/server/test/hanabi.test.ts`（真实 socket 抓包对照服务器状态）、`apps/server/test/spectate.test.ts`；手动抓包 `node scripts/spy.mjs`（连真实服务器，两个 socket 打完一局，检查发给每人的每一条更新）。
+
+## 对外接口（packages/game）
+
+- `createGame(players, seed, { masterMode?, firstPlayer?, stack? })`：开局。`stack` 指定发牌顺序（先发每人的手牌，第 1 位玩家先拿），教程用。
+- `apply(state, playerId, command)` / `applyCommand(...)`：纯函数，不改输入。命令：`CLUE {target, kind: "color"|"rank", value}`、`DISCARD {cardId}`、`PLAY {cardId}`、`REORDER {order}`。
+- `legalActions`、`timeoutCommand` / `timeoutTurn`、`redactGameForViewer`、`scoreOf`、`isPlayable`、`clueTouches`、`chopCard`、`byDrawOrder`、`lostCard`。
+- **预览局面工厂**（`src/scenes.ts`）：
+  - `buildGame(options)` 按参数造任意精确局面：`players`（人数或玩家）、`hands`（每人手牌从左到右，`"R1"` 或 `{ face: "R2", color: true, rank: true, notColors, notRanks }`）、`deck`（接下来摸到的牌）、`deckSize`（多出来的牌放进弃牌堆）、`fireworks`、`discard`、`clueTokens`、`misfires`、`current`、`turn`、`masterMode`、`finalRound: { endsAfter, turnsLeft }`。配件守恒，牌不够会报错。
+  - `scene(name)` 按名字造常见局面（自己是 p1 甲），名字见 `SCENE_NAMES`：start / start3 / start5 / myTurn / clued / theirTurn / tokens8 / tokens0 / misfire2 / finalRound / late / endScore（14 分）/ endPerfect / endMisfire（0 分，进度 14）/ masterLost / master。对手离线、超时这种房间级的状态由预览页改 `members` 和 `turnRemainingMs`。
+- 房间：`CHAT_PRESETS`（对局中可发的短语）、`room:options {masterMode}`、快照里的 `options`、`best`。
+
+## 一个人怎么测
+
+```bash
+npm run dev
+node scripts/test-bot.mjs host 3 2          # 建 3 人房、拉 1 个机器人，等你从网页加入凑满后开局
+node scripts/test-bot.mjs host 2 1 master   # 大师模式
+node scripts/test-bot.mjs join <房间码>      # 机器人加入你建的房间
+node scripts/spy.mjs                        # 抓包检查隐藏信息
+```
+
+环境变量：`BOT_DELAY_MS`（思考时间）、`BOT_IDLE=1`（挂机等超时）、`BOT_ONCE=1`（打完一局退出，默认自动同意再来一局）。
 
 ## 目录
 
 | 路径 | 内容 |
 |---|---|
-| `packages/game/src/engine.ts` | 规则引擎：`apply(state, playerId, command, rng) → { state, events }`，纯函数；配对与合法走法 `moveOptions`、推进 `advanceRunners`、爆掉、收手与占领、超时处理、爆掉概率 `bustProbability` |
-| `packages/game/src/board.ts` | 赛道编号和格数、三种分组方式 |
-| `packages/game/src/bot.ts` | 人机：本回合价值 = 各登山者多爬的格数 ÷ 赛道长（爬到顶另加分）；再掷还是收手按一步前瞻（爆掉概率 × 丢掉的价值 对比 不爆时平均多拿的价值）；选走法挑走完以后期望价值最大的。模拟对局里对「28 法则」胜率约 62% |
-| `apps/server` | Socket.IO 房间、人机座位和托管（`BOT_DELAY_SCALE=0` 让人机立刻行动，测试用）、断线用原昵称回到座位、每一步 45 秒计时（超时自动处理）、语音信令、每局的种子和动作序列写进 `logs/games.jsonl` |
-| `apps/web/src/Mountain.tsx` | 山体棋盘：11 根岩柱拼成一座山，登山者（临时标记）、营地小旗（永久标记）、山顶大旗（占领）；攀爬、摔落、插旗动画；鼠标停在走法上时预览登山者会到哪 |
-| `apps/web/src/DiceTray.tsx` | 骰子盘：翻滚动画、按分组标色、走法选项、再掷 / 收手、爆掉概率 |
-| `apps/web/src/GameBoard.tsx` | 对局界面：舞台、登山队、登山日志、横幅、结算弹窗 |
-| `art/` | PixelLab 美术流水线（见下） |
-
-## 美术流水线（`art/`）
-
-PixelLab API，密钥只在 `~/.config/pixellab/api_key`，不进仓库。每次调用记进 `art/ledger.jsonl`，`BUDGET_USD` 设上限。生成的原图和中间文件在被 gitignore 的 `art/out/`。
-
-- `pixellab.py`：API 客户端（同步出图、后台任务轮询、角色和动画），调用即记账。
-- `r1.py`：第一轮候选。小图用 `/generate-image-v2`（≤42px 一次出 64 个候选），场景大图用 `/create-image-pixen`（512×288）。
-- `sheet.py`：把一批候选拼成对照图。
-- `selection.json` + `export.py`：选定的图导出到 `apps/web/public/art/`。登山者、头像、营地小旗、山顶大旗只画红色一套，其他座位色把红色像素换色；骰面在选定的空白骰子上按点数画点。
-
-## 画面：白天版和夜间版
-
-只有像素风一种画面（原始版本已删掉），配色分夜间（深色，默认）和白天（白底）两种。顶栏「切换白天版 / 切换夜间版」随时切换，只影响自己看到的画面，记在浏览器的 `gm-pixel-theme` 里；gulugagame.com 上的大厅和各个游戏同源，共用这一个选择。
-
-- 夜间配色就是 `app-pixel.css`（首页和等候房间）和 `cantstop.css`（牌桌）本身。白天版不单独写：`apps/web/day-theme.ts`（Vite 插件）在构建时把这些样式里和颜色有关的声明照抄一份，选择器前加 `:root[data-theme="day"]`，按 `apps/web/day-palette.ts` 的调色表换成白天的颜色。改夜间样式时白天版自动跟着变，只有新出现的深色需要在调色表里补一行。
-- 机械换色不合适的地方在 `apps/web/src/theme-day.css` 里手写。
-- `index.html` 里一小段脚本在样式生效前就给 `<html>` 加上 `data-theme="day"`，打开页面不会先闪一下深色；切换逻辑和按钮在 `src/theme.tsx`。
+| `packages/game` | 规则引擎、删减、预览局面工厂、人机、房间协议类型 |
+| `apps/server` | Socket.IO 房间服务器（建房、重连、观战、人机托管、预设短语聊天、本房最高分） |
+| `apps/web` | 网页（Vite + React） |
+| `art/` | 美术规格 `spec.md`、出图脚本、定稿 `out/final/`（复制到 `apps/web/public/art/`） |
+| `scripts/` | 陪玩机器人、抓包脚本 |
 
 ## 部署
 
-服务器上 `~/cantstop`，pm2 进程 `cantstop`（端口 3008），网页在 `/var/www/cantstop`，Caddy `handle_path /cantstop/*`（也在付费网关 `@games` 里）。本机运行 `~/projects/deploy.sh cantstop`（服务器拉 GitHub 上的 main）。
-
-pm2 按仓库根目录的 `ecosystem.config.cjs` 直接启动一个 `node --import tsx` 进程跑服务端（不经过 `npm start`）。端口和密钥存在 pm2 里，不进仓库。
+服务器上 `~/hanabi`，pm2 进程 `hanabi`（端口 3024），网页在 `/var/www/hanabi`，Caddy `handle_path /hanabi/*`（在付费网关 `@games` 里）。由制作人部署。

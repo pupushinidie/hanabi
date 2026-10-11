@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { CAPACITY_OPTIONS, type Capacity, type GameCommand, type LobbyRoomSnapshot, type PublicRoomSummary } from "@hanabi/game";
-import { climberArt, dieArt, sceneArt, SEATS } from "./art.js";
+import { art } from "./art.js";
 import { useConfirm } from "./confirm.js";
 import GameBoard from "./GameBoard.js";
 import GameRules from "./GameRules.js";
@@ -290,10 +290,8 @@ function App() {
             每爬一步都要选：再掷一次继续冒险，还是收手扎营保住进度？贪心爆掉，这回合就白爬了。
             先登顶 3 条路的人获胜。创建一间私人房间，或输入房间码加入朋友的对局；人不够可以加人机。
           </p>
-          <img className="cs-hero" src={sceneArt.hero} alt="" />
+          <img className="cs-hero" src={art.card("R", 5)} alt="" />
           <div className="cs-showcase" aria-hidden="true">
-            {SEATS.map((seat, index) => <img key={seat.key} src={climberArt(index)} alt="" />)}
-            {[3, 4, 5, 6].map((face) => <img key={face} className="cs-showcase-die" src={dieArt(face)} alt="" />)}
           </div>
         </div>
 

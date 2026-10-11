@@ -18,14 +18,14 @@ import {
 /** 最小的房间人数（对局要坐满才开始测）。 */
 const CAPACITY: Capacity = 2;
 /** 这款游戏有没有藏起来的信息。 */
-const HIDDEN_INFO = false;
+const HIDDEN_INFO = true;
 /** 开局后先走几步（每步选轮到的人的第一个合法动作），让场上有藏起来的牌。 */
 const STEPS = 4;
 /** 只在服务端的字段（牌堆顺序、种子等），观战的人永远拿不到。 */
-const SERVER_ONLY = ["deck", "seed"];
+const SERVER_ONLY = ["deck", "seed", "rngState", "log"];
 /** 这份状态里看得到几样藏起来的东西（手牌之类）。 */
-function secretsSeen(_game: GameState): number {
-  return 0;
+function secretsSeen(game: GameState): number {
+  return game.players.reduce((total, player) => total + player.hand.filter((card) => game.cards[card.id] !== undefined).length, 0);
 }
 // ----------------------------------------
 
@@ -209,9 +209,12 @@ describe("观战和公开房间", () => {
     const blind = latest.get(viewer)!.game!;
     for (const key of SERVER_ONLY) expect(hiddenField((blind as unknown as Record<string, unknown>)[key])).toBe(true);
     // 每位玩家自己看到的那一份里，自己身上的秘密。
+    // 花火：秘密是每个人自己的手牌（别人看得到，自己看不到）。
     const owners = players.reduce((total, client) => {
       const game = latest.get(client)!.game!;
-      return total + secretsSeen({ ...game, players: game.players.filter((player) => player.id === seatOf(client)) });
+      const mine = { ...game, players: game.players.filter((player) => player.id === seatOf(client)) };
+      expect(secretsSeen(mine)).toBe(0);
+      return total + mine.players[0]!.hand.length;
     }, 0);
     if (HIDDEN_INFO) {
       expect(owners).toBeGreaterThan(0);

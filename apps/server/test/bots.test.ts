@@ -14,22 +14,22 @@ import {
 } from "@hanabi/game";
 
 // ---------- 每款游戏不一样的地方 ----------
-/** 测试里真人怎么走：从合法动作里挑一个（要保证对局能走完）。欲罢不能：推进完就收手，回合短。 */
-function humanMove(game: GameState, actions: GameCommand[]): GameCommand {
-  return game.stage === "decide" ? { type: "STOP" } : actions[0]!;
+/** 测试里真人怎么走：从合法动作里挑一个（要保证对局能走完）。花火：第一个合法动作（有标记就提示，没有就出第一张）。 */
+function humanMove(_game: GameState, actions: GameCommand[]): GameCommand {
+  return actions[0]!;
 }
 /** 这位玩家自己做了点什么（不是超时、不是轮到他）。 */
 function actedBy(room: LobbyRoomSnapshot, playerId: string): boolean {
   return room.game?.events.some((event) => {
-    const type: string = event.type;
-    return "player" in event && event.player === playerId && type !== "TurnTimedOut" && type !== "TurnStarted";
-  }) === true;
+    // 超时的那一步也会带出弃牌/摸牌事件，所以有 TurnTimedOut 的不算
+    return "player" in event && event.player === playerId && (event.type === "Clued" || event.type === "Played" || event.type === "Discarded");
+  }) === true && !room.game.events.some((event) => event.type === "TurnTimedOut");
 }
 /** 最小的房间人数选项、开局至少几人。 */
 const MIN_CAPACITY: Capacity = 2;
 const MIN_PLAYERS = 2;
 /** 「一个人加满人机」用几人房；「加满后加不了」用几人房。 */
-const SOLO_CAPACITY: Capacity = 4;
+const SOLO_CAPACITY: Capacity = 5;
 const FULL_TEST_CAPACITY: Capacity = 3;
 // ----------------------------------------
 
