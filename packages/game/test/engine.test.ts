@@ -284,6 +284,15 @@ describe("规则书 4.4 / 9.3 隐藏信息", () => {
     for (const id of game.deck!) expect(god.cards[id]).toBeUndefined();
   });
 
+  it("对局结束后亮出所有人的手牌，牌堆仍然不给", () => {
+    const game = buildGame({ players: 3, hands: [["W3"]], fireworks: { R: 2 }, misfires: 2 });
+    const done = act(game, { type: "PLAY", cardId: idAt(game, 0, 0) });
+    const view = redactGameForViewer(done, "p1");
+    for (const p of done.players) for (const card of p.hand) expect(view.cards[card.id]).toEqual(done.cards[card.id]);
+    expect(view.deck).toBeUndefined();
+    for (const id of done.deck!) expect(view.cards[id]).toBeUndefined();
+  });
+
   it("删减后的状态不和原状态共享对象（改它不会改到服务器状态）", () => {
     const game = createGame(P3, 5);
     const view = redactGameForViewer(game, "a");

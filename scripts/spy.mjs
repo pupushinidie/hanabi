@@ -42,7 +42,7 @@ for (const [key, s] of [["a", a], ["b", b]]) {
   for (const raw of messages[key]) {
     if (/"deck"|"seed"|"rngState"|"log"/.test(raw)) problems.push(`${key} 收到了牌堆/种子字段`);
     const game = JSON.parse(raw).game;
-    if (!game) continue;
+    if (!game || game.phase === "finished") continue; // 结束后亮牌
     const me = game.players.find((p) => p.id === seat);
     for (const card of me.hand) {
       checkedCards += 1;

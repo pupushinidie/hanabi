@@ -456,7 +456,8 @@ export interface RedactOptions {
  * 按观看者删减（规则书 9.3、补充 3.4）：
  * - 去掉牌堆、种子、随机数状态、动作序列；
  * - 牌面表只留看得到的：弃牌堆、已打出的、别人手里的；观看者自己手里的牌一律删掉；
- * - viewerId 不是座位（观战）时，不开上帝视角就所有人的手牌都看不到，只看提示。
+ * - viewerId 不是座位（观战）时，不开上帝视角就所有人的手牌都看不到，只看提示；
+ * - 对局结束后亮出所有人的手牌（结算页看「原来我手里是什么」）。
  * 手牌本身（HandCard）从来不带牌面，事件里的摸牌也不带牌面。
  */
 export function redactGameForViewer(state: GameState, viewerId: string, options: RedactOptions = {}): GameState {
@@ -469,8 +470,10 @@ export function redactGameForViewer(state: GameState, viewerId: string, options:
   };
   state.discard.forEach(show);
   state.played.forEach(show);
+  // 对局结束后亮出所有人的手牌（牌堆仍然不给）
+  const reveal = state.phase === "finished";
   for (const player of state.players) {
-    if (seated ? player.id === viewerId : !options.seeAll) continue;
+    if (!reveal && (seated ? player.id === viewerId : !options.seeAll)) continue;
     player.hand.forEach((card) => show(card.id));
   }
   return structuredClone({ ...rest, cards: visible });

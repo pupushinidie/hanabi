@@ -55,7 +55,7 @@ BASE_PATH=/hanabi/ npm run build
 ## 隐藏信息
 
 - 引擎状态里手牌（`HandCard`）**从来不带牌面**，牌面只在 `GameState.cards` 表里；卡牌 id 是 0–49 的随机排列。
-- `redactGameForViewer(state, viewerId, { seeAll? })` 删掉牌堆、种子、随机数状态、动作序列，`cards` 表只留弃牌堆、已打出的、别人手里的。观战（viewerId 不是座位）默认看不到任何手牌，`seeAll` 时看得到所有手牌。
+- `redactGameForViewer(state, viewerId, { seeAll? })` 删掉牌堆、种子、随机数状态、动作序列，`cards` 表只留弃牌堆、已打出的、别人手里的。观战（viewerId 不是座位）默认看不到任何手牌，`seeAll` 时看得到所有手牌。对局结束后亮出所有人的手牌（牌堆仍然不给）。
 - 摸牌事件 `Drew` 只有 cardId。
 - 测试：`packages/game/test/engine.test.ts`（每个视角）、`apps/server/test/hanabi.test.ts`（真实 socket 抓包对照服务器状态）、`apps/server/test/spectate.test.ts`；手动抓包 `node scripts/spy.mjs`（连真实服务器，两个 socket 打完一局，检查发给每人的每一条更新）。
 

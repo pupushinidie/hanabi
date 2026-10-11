@@ -99,6 +99,7 @@ function assertNoLeak(client: TestSocket, truth: () => GameState | undefined) {
     const game = room.game;
     if (!game) continue;
     const me = game.players.find((p) => p.id === seat)!;
+    if (game.phase === "finished") continue; // 结束后亮牌（牌堆仍不给，上面已查）
     for (const card of me.hand) {
       expect(game.cards[card.id], "自己的手牌不该有牌面").toBeUndefined();
       expect(Object.keys(card).sort()).toEqual(["clues", "drawnAt", "id", "marks"]);
