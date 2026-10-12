@@ -21,7 +21,7 @@ import {
 import GameBoard from "./GameBoard.js";
 import RoomChat from "./RoomChat.js";
 import GameRules from "./GameRules.js";
-import { RoomView } from "./App.js";
+import { HbBackdrop, RoomView } from "./App.js";
 import { applyTheme, readTheme, ThemeToggle } from "./theme.js";
 import { useVoice } from "./voice.js";
 import "./styles.css";
@@ -118,6 +118,7 @@ function Preview() {
   if (room.status === "waiting") {
     return (
       <main className="app-shell hb-waitpage">
+        <HbBackdrop theme={themeNow === "day" ? "day" : "night"} />
         <header className="topbar">{brand}<div className="topbar-right">{toggle}{connection}</div></header>
         <div className="hb-wait">
           <RoomView room={room} busy={false} error="" notice="" onCopyCode={() => {}} onLeave={() => {}} onStart={() => {}} onKick={() => {}} onAddBot={() => {}} onDissolve={() => {}} />
@@ -139,6 +140,7 @@ function Preview() {
   };
   return (
     <main className="app-shell hb-game">
+      <HbBackdrop theme={themeNow === "day" ? "day" : "night"} />
       <GameBoard
         room={room}
         busy={false}

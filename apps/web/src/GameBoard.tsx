@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import {
   clueTouches,
   COLORS,
@@ -114,20 +114,6 @@ function useBoardLayout(game: GameState, myId: string): [React.RefObject<HTMLEle
   return [ref, boardRef, layout, size];
 }
 
-/** 背景：按 cover 摆好场景图，夜间叠灯笼闪烁（和背景同一个缩放容器，坐标对齐）。 */
-function Scene({ theme, w, h }: { theme: "day" | "night"; w: number; h: number }) {
-  const k = Math.max(w / 512, h / 288);
-  const style: CSSProperties = { width: 512 * k, height: 288 * k, left: (w - 512 * k) / 2, top: (h - 288 * k) / 2 };
-  return (
-    <div className="hb-scene" aria-hidden="true">
-      <div className="hb-scene-img" style={{ ...style, backgroundImage: `url(${theme === "day" ? art.bgDay : art.bgNight})` }}>
-        {theme === "night" && <i className="hb-lanterns" style={{ backgroundImage: `url(${art.lanterns})` }} />}
-      </div>
-      <div className={`hb-scene-veil ${theme}`} />
-    </div>
-  );
-}
-
 function GameBoard(props: GameBoardProps) {
   const { room, busy, error, notice, brand, connection, themeToggle, theme, chat, onCommand, onRematch, onAuto, onDissolve, watchId, onWatch, onLeave, selfSeat, mode = "online", finalActions, onUiState } = props;
   const game = room.game!;
@@ -146,7 +132,7 @@ function GameBoard(props: GameBoardProps) {
   const me = game.players.find((p) => p.id === myId)!;
   const myIndex = game.players.findIndex((p) => p.id === myId);
   const mates = game.players.map((_, k) => game.players[(myIndex + 1 + k) % game.players.length]!).filter((p) => p.id !== myId);
-  const [stageRef, boardRef, layout, stageSize] = useBoardLayout(game, myId);
+  const [stageRef, boardRef, layout] = useBoardLayout(game, myId);
   // 声音：每个动作的音效（game-sfx.ts）+ 自己回合最后 5 秒的倒计时
   useGameSfx({ game, selfId, autoPlaying });
   useSfxCountdown(myTurn && !autoPlaying, secondsLeft);
@@ -375,7 +361,6 @@ function GameBoard(props: GameBoardProps) {
 
       <div className="hb-main">
         <section className="hb-stage" ref={stageRef as React.RefObject<HTMLElement>}>
-          {!layout.mobile && <Scene theme={theme} w={stageSize.w} h={stageSize.h} />}
           <div className="hb-board" ref={boardRef}>
             <div className="hb-mates" style={{ gridTemplateColumns: layout.mobile ? "1fr" : `repeat(${layout.perRow}, max-content)` }} data-tutorial="mates">
               {mates.map((player, index) => (

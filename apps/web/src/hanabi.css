@@ -366,3 +366,21 @@ button.hb-cardcol:hover .hb-card:not(.lifted) { transform: translateY(-4px); }
 .hb-chat .tut-checklist { flex: 1; padding: 8px 10px; }
 .app-shell .hb-chat .tut-checklist ul { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2px 8px; margin: 0; padding: 0; list-style: none; }
 .app-shell .hb-chat .tut-checklist li { font-size: 12px; }
+
+/* ---------- 全屏背景：夏祭场景铺满窗口（16:9 居中裁切），夜间叠灯笼闪烁 ---------- */
+.hb-backdrop { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; background: #080a18; }
+.hb-backdrop-art {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: max(100vw, calc(100vh * 16 / 9));
+  height: max(100vh, calc(100vw * 9 / 16));
+  transform: translate(-50%, -50%);
+  background-size: 100% 100%;
+  image-rendering: pixelated;
+}
+.hb-backdrop-veil { position: absolute; inset: 0; background: rgba(8, 10, 24, 0.38); }
+.hb-backdrop-veil.day { background: rgba(255, 255, 255, 0.15); }
+.app-shell.hb-home > :not(.hb-backdrop):not(.gm-modal-backdrop),
+.app-shell.hb-waitpage > :not(.hb-backdrop):not(.gm-modal-backdrop),
+.app-shell.hb-game > :not(.hb-backdrop):not(.gm-modal-backdrop) { position: relative; z-index: 1; }

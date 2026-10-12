@@ -6,6 +6,9 @@ import type { Color, Rank } from "@hanabi/game";
 
 const ROOT = `${import.meta.env.BASE_URL}art/`;
 
+/** 全屏场景背景（首页、等候房间、牌桌、教程、观战都铺这一张；夜间版叠灯笼闪烁）。 */
+export const bgArt = { night: `${ROOT}bg/night@3x.png`, day: `${ROOT}bg/day@3x.png`, lanterns: `${ROOT}fx/lanterns-night.png` };
+
 export const art = {
   bgNight: `${ROOT}bg/night@3x.png`,
   bgDay: `${ROOT}bg/day@3x.png`,

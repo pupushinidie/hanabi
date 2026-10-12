@@ -36,3 +36,6 @@
 
 /* 结算弹窗里的大烟火永远是夜空底 */
 :root[data-theme="day"] .hb-result .hb-finale { background-color: #141b3a; }
+
+/* 全屏背景：白天版底图边角换成浅色（veil 已由 .hb-backdrop-veil.day 处理） */
+:root[data-theme="day"] .hb-backdrop { background: #e8ecf4; }
