@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { CAPACITY_OPTIONS, type Capacity, type GameCommand, type LobbyRoomSnapshot, type PublicRoomSummary } from "@hanabi/game";
-import { art } from "./art.js";
+import { art, bgArt } from "./art.js";
 import { useConfirm } from "./confirm.js";
 import GameBoard from "./GameBoard.js";
 import GameRules from "./GameRules.js";
-import { NO_BGM, SoundToggle, sfx, useBgm, useRoomSfx } from "./gm-sound.js";
+import { type BgmTrack, SoundToggle, sfx, useBgm, useRoomSfx } from "./gm-sound.js";
 import OnlineRooms from "./OnlineRooms.js";
 import RoomChat from "./RoomChat.js";
 import { roomRole, RoomSettingsPanel, SeatSwitch } from "./RoomExtras.js";
@@ -26,6 +26,9 @@ const CENTER_URL = import.meta.env.DEV ? `${window.location.protocol}//${window.
 function normalizeRoomCode(value: string): string {
   return value.toUpperCase().replace(/[^A-HJ-NP-Z2-9]/g, "").slice(0, 6);
 }
+
+// 背景音乐：进了房间（等候房间、对局、观战）和新手教程里放，首页和房间列表不放。gain / start / end 按这首曲子量（见 gm-sound.tsx）。
+const BGM: BgmTrack = { src: `${import.meta.env.BASE_URL}bgm/hanabi.mp3`, gain: 0.76, start: 1.15, end: 184.4 };
 
 function App() {
   const [mode, setMode] = useState<EntryMode>("create");
@@ -49,7 +52,7 @@ function App() {
   // 新手教程：首页或等候房间点进来（地址带 ?tutorial 时直接打开，游戏中心可以直接链过来）
   const [tutorialOpen, setTutorialOpen] = useState(() => new URLSearchParams(window.location.search).has("tutorial"));
   // 声音：进了房间（等候房间、对局、观战）和新手教程里顶栏有 ♪ 面板（音效、语音音量）；这款还没有背景音乐。
-  useBgm(room || tutorialOpen ? NO_BGM : null);
+  useBgm(room || tutorialOpen ? BGM : null);
   // 房间里的提示音：有人进出、开局、收到别人的聊天。聊天只留最近几十条，按最后一条的 id 变了几次来数。
   const chatSeen = useRef({ id: "", count: 0 });
   const lastChat = room?.chat[room.chat.length - 1];
@@ -252,6 +255,7 @@ function App() {
   if (tutorialOpen && room?.status !== "playing") {
     return (
       <main data-gc-table className="app-shell hb-game">
+        <HbBackdrop theme={theme} />
         <TutorialMode name={name} brand={<Brand />} themeToggle={themeToggle} theme={theme === "day" ? "day" : "night"} waitingRoom={room?.code} onExit={closeTutorial} />
       </main>
     );
@@ -262,6 +266,7 @@ function App() {
     const watched = players.some((player) => player.id === watchId) ? watchId : players[0]!.id;
     return (
       <main data-gc-table className="app-shell hb-game">
+        <HbBackdrop theme={theme} />
         <GameBoard
           room={room}
           busy={busy}
@@ -288,6 +293,7 @@ function App() {
   if (room) {
     return (
       <main className="app-shell hb-waitpage">
+        <HbBackdrop theme={theme} />
         <header className="topbar">
           <Brand />
           <div className="topbar-right">
@@ -327,6 +333,7 @@ function App() {
 
   return (
     <main className="app-shell hb-home">
+      <HbBackdrop theme={theme} />
       <header className="topbar">
         <Brand />
         <div className="topbar-right">
@@ -355,8 +362,6 @@ function App() {
           <div className="hb-showcase" aria-hidden="true">
             {(["R1", "Y2", "G3", "B4", "W5"] as const).map((face) => <img key={face} src={art.card(face[0] as "R", Number(face[1]) as 1)} alt="" />)}
           </div>
-          {/* 在线牌桌放在左栏（首页一屏放下） */}
-          <OnlineRooms rooms={lobbyRooms} connected={connected} busy={busy} onJoin={joinListed} />
         </div>
 
         <section className="entry-card" aria-labelledby="entry-title">
@@ -453,6 +458,9 @@ function App() {
           <div className="entry-footnote"><span className="lock-icon">◇</span> 默认邀请制 · 房主可以设为公开</div>
         </section>
       </section>
+
+      {/* 在线牌桌：桌面放右栏（首页一屏放下），手机排在下面 */}
+      <OnlineRooms rooms={lobbyRooms} connected={connected} busy={busy} onJoin={joinListed} />
 
       <section className="how-it-works" aria-label="游戏流程">
         <div className="how-item"><span className="how-number">01</span><span>创建或加入</span></div>
@@ -614,3 +622,15 @@ function MasterModeSwitch({ room, isHost }: { room: LobbyRoomSnapshot; isHost: b
 }
 
 export default App;
+
+/** 全屏场景背景：16:9 的夏祭夜景铺满窗口（居中裁切），夜间叠灯笼闪烁，上面一层暗色 veil；面板都压在它上面（z-index 1）。 */
+export function HbBackdrop({ theme }: { theme: "day" | "night" }) {
+  return (
+    <div className="hb-backdrop" aria-hidden="true">
+      <div className="hb-backdrop-art" style={{ backgroundImage: `url(${theme === "day" ? bgArt.day : bgArt.night})` }}>
+        {theme === "night" && <i className="hb-lanterns" style={{ backgroundImage: `url(${bgArt.lanterns})` }} />}
+      </div>
+      <div className={`hb-backdrop-veil ${theme}`} />
+    </div>
+  );
+}
