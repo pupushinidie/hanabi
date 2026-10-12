@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { CAPACITY_OPTIONS, type Capacity, type GameCommand, type LobbyRoomSnapshot, type PublicRoomSummary } from "@hanabi/game";
-import { art, bgArt } from "./art.js";
+import { art } from "./art.js";
 import { useConfirm } from "./confirm.js";
 import GameBoard from "./GameBoard.js";
 import GameRules from "./GameRules.js";
@@ -255,7 +255,6 @@ function App() {
   if (tutorialOpen && room?.status !== "playing") {
     return (
       <main data-gc-table className="app-shell hb-game">
-        <HbBackdrop theme={theme} />
         <TutorialMode name={name} brand={<Brand />} themeToggle={themeToggle} theme={theme === "day" ? "day" : "night"} waitingRoom={room?.code} onExit={closeTutorial} />
       </main>
     );
@@ -266,7 +265,6 @@ function App() {
     const watched = players.some((player) => player.id === watchId) ? watchId : players[0]!.id;
     return (
       <main data-gc-table className="app-shell hb-game">
-        <HbBackdrop theme={theme} />
         <GameBoard
           room={room}
           busy={busy}
@@ -293,7 +291,6 @@ function App() {
   if (room) {
     return (
       <main className="app-shell hb-waitpage">
-        <HbBackdrop theme={theme} />
         <header className="topbar">
           <Brand />
           <div className="topbar-right">
@@ -333,7 +330,6 @@ function App() {
 
   return (
     <main className="app-shell hb-home">
-      <HbBackdrop theme={theme} />
       <header className="topbar">
         <Brand />
         <div className="topbar-right">
@@ -362,6 +358,8 @@ function App() {
           <div className="hb-showcase" aria-hidden="true">
             {(["R1", "Y2", "G3", "B4", "W5"] as const).map((face) => <img key={face} src={art.card(face[0] as "R", Number(face[1]) as 1)} alt="" />)}
           </div>
+          {/* 在线牌桌放在左栏（首页一屏放下） */}
+          <OnlineRooms rooms={lobbyRooms} connected={connected} busy={busy} onJoin={joinListed} />
         </div>
 
         <section className="entry-card" aria-labelledby="entry-title">
@@ -458,9 +456,6 @@ function App() {
           <div className="entry-footnote"><span className="lock-icon">◇</span> 默认邀请制 · 房主可以设为公开</div>
         </section>
       </section>
-
-      {/* 在线牌桌：桌面放右栏（首页一屏放下），手机排在下面 */}
-      <OnlineRooms rooms={lobbyRooms} connected={connected} busy={busy} onJoin={joinListed} />
 
       <section className="how-it-works" aria-label="游戏流程">
         <div className="how-item"><span className="how-number">01</span><span>创建或加入</span></div>
@@ -622,15 +617,3 @@ function MasterModeSwitch({ room, isHost }: { room: LobbyRoomSnapshot; isHost: b
 }
 
 export default App;
-
-/** 全屏场景背景：16:9 的夏祭夜景铺满窗口（居中裁切），夜间叠灯笼闪烁，上面一层暗色 veil；面板都压在它上面（z-index 1）。 */
-export function HbBackdrop({ theme }: { theme: "day" | "night" }) {
-  return (
-    <div className="hb-backdrop" aria-hidden="true">
-      <div className="hb-backdrop-art" style={{ backgroundImage: `url(${theme === "day" ? bgArt.day : bgArt.night})` }}>
-        {theme === "night" && <i className="hb-lanterns" style={{ backgroundImage: `url(${bgArt.lanterns})` }} />}
-      </div>
-      <div className={`hb-backdrop-veil ${theme}`} />
-    </div>
-  );
-}
